@@ -45,6 +45,16 @@ under its root directory:
 Remove-Item -Recurse -Force ..\..\.lgtm-native
 ```
 
+If that second command reports `Access is denied` on `gpx_*.exe` files under Grafana's plugin
+directories, Grafana's plugin backends are still running. `Stop-Process -Name grafana` kills the
+server but not its plugin subprocesses, and they hold their own binaries open. Clear them first:
+
+```powershell
+Get-Process | Where-Object Name -like 'gpx_*' | Stop-Process -Force
+```
+
+They accumulate one set per Grafana start, so a few restarts leave a few dozen of them.
+
 ## Versions
 
 Pinned to match the `grafana/otel-lgtm` image, so this is a faithful stand-in rather than an
