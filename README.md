@@ -66,6 +66,7 @@ git clone https://github.com/PXINXYZ/react-observability-demo.git
 cd react-observability-demo
 npm install
 
+cp .env.example .env      # sets VITE_OTLP_ENDPOINT=http://localhost:4318
 docker compose up -d      # the OpenTelemetry backend
 npm run dev               # the app
 ```
@@ -73,7 +74,10 @@ npm run dev               # the app
 Open <http://localhost:5173>, click around, then open <http://localhost:3000> and log in with
 `admin` / `admin`. Explore → Tempo → Search, and filter by `service.name = react-observability-demo`.
 
-No `.env` file is needed — the defaults point at `http://localhost:4318`.
+The `cp` is not optional if you want to see anything in Grafana. `VITE_OTLP_ENDPOINT` has no
+built-in default: an unset endpoint means no exporters are constructed, and the app will tell you so
+in the header ("OTLP off") rather than pretending. That is deliberate — a browser bundle that
+silently ships to `localhost` in production would be worse than one that ships nowhere.
 
 ### No Docker?
 
