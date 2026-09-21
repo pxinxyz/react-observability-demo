@@ -20,6 +20,13 @@ export interface ObservabilityConfig {
   sampleRate: number
   metricExportIntervalMs: number
   grafanaUrl: string | null
+  /**
+   * Where the bundled `docker-compose.yml` serves Grafana. Used only as the
+   * fallback for the "open in Grafana" link when `VITE_GRAFANA_URL` is unset,
+   * so the value lives with the rest of the configuration instead of being
+   * spelled out inside a page component.
+   */
+  defaultGrafanaUrl: string
 }
 
 /**
@@ -73,7 +80,9 @@ function resolveConfig(): ObservabilityConfig {
   const configured = rawEndpoint.length > 0
 
   const serviceName = env.VITE_SERVICE_NAME?.trim() || 'react-observability-demo'
-  const serviceVersion = env.VITE_SERVICE_VERSION?.trim() || '0.1.0'
+  // Falls back to the version injected from package.json rather than a literal,
+  // so this can only be overridden deliberately, never drift by accident.
+  const serviceVersion = env.VITE_SERVICE_VERSION?.trim() || __APP_VERSION__
   const environment = env.VITE_DEPLOYMENT_ENVIRONMENT?.trim() || (import.meta.env.PROD ? 'production' : 'development')
 
   return {
@@ -91,6 +100,7 @@ function resolveConfig(): ObservabilityConfig {
     sampleRate: readSampleRate(env.VITE_TRACES_SAMPLE_RATE),
     metricExportIntervalMs: readInterval(env.VITE_METRIC_EXPORT_INTERVAL),
     grafanaUrl: env.VITE_GRAFANA_URL?.trim() || null,
+    defaultGrafanaUrl: 'http://localhost:3000',
   }
 }
 

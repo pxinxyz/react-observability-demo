@@ -148,16 +148,19 @@ export function position(spans: readonly WaterfallSpan[]): PositionedSpan[] {
 /**
  * Stable per-service colour, so a service keeps its colour between renders and
  * between the inline waterfall and the drawer.
+ *
+ * These are categorical, not semantic: see the series tokens in index.css for
+ * why the health colours are deliberately excluded.
  */
 const SERVICE_COLOURS = [
-  'var(--color-accent)',
-  'var(--color-ok)',
-  'var(--color-info)',
-  'var(--color-warn)',
-  '#f472b6',
-  '#22d3ee',
-  '#a3e635',
-  '#fb923c',
+  'var(--color-series-1)',
+  'var(--color-series-2)',
+  'var(--color-series-3)',
+  'var(--color-series-4)',
+  'var(--color-series-5)',
+  'var(--color-series-6)',
+  'var(--color-series-7)',
+  'var(--color-series-8)',
 ]
 
 export function serviceColour(serviceName: string): string {
@@ -165,5 +168,5 @@ export function serviceColour(serviceName: string): string {
   for (let i = 0; i < serviceName.length; i += 1) {
     hash = (hash * 31 + serviceName.charCodeAt(i)) >>> 0
   }
-  return SERVICE_COLOURS[hash % SERVICE_COLOURS.length] ?? 'var(--color-accent)'
+  return SERVICE_COLOURS[hash % SERVICE_COLOURS.length] ?? 'var(--color-series-1)'
 }

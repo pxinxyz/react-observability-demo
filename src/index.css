@@ -52,6 +52,24 @@
   --color-crit: #f7768e;
   --color-info: #bb9af7;
 
+  /*
+   * Categorical series colours, for trace spans and chart series.
+   *
+   * Deliberately drawn only from Tokyo Night's cool hues. These previously
+   * included the semantic green/amber/red, which meant a span bar could render
+   * green — reading as "healthy" — purely because of how its service name
+   * hashed. Two services are not healthy and degraded; they are just different
+   * services, and the palette has to say so.
+   */
+  --color-series-1: #7aa2f7;
+  --color-series-2: #7dcfff;
+  --color-series-3: #bb9af7;
+  --color-series-4: #c678dd;
+  --color-series-5: #2ac3de;
+  --color-series-6: #9d7cd8;
+  --color-series-7: #449dab;
+  --color-series-8: #6a8fd8;
+
   /* Dense type scale. 11px floor. */
   --text-2xs: 0.6875rem; /* 11px — tier 3 metadata floor */
   --text-2xs--line-height: 1rem;

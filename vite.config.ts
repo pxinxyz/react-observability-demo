@@ -1,7 +1,21 @@
 import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+
+/**
+ * The version lives in `package.json` and nowhere else.
+ *
+ * It used to be duplicated across package.json, .env.example, the README and a
+ * fallback inside config.ts, so a release meant editing four files and getting
+ * four chances to miss one. Injecting it at build time makes package.json the
+ * single source of truth, and the exported `service.version` attribute can no
+ * longer drift from the published version.
+ */
+const pkg = JSON.parse(
+  readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'),
+) as { version: string }
 
 /**
  * The routes that exist as Vercel functions in `api/`.
@@ -64,6 +78,9 @@ function serverlessApi(): Plugin {
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), serverlessApi()],
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

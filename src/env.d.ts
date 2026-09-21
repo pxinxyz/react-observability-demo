@@ -1,6 +1,13 @@
 /// <reference types="vite/client" />
 
 /**
+ * Injected at build time from `package.json` by `vite.config.ts`, so the
+ * `service.version` resource attribute can never drift from the published
+ * version.
+ */
+declare const __APP_VERSION__: string
+
+/**
  * Every knob this app has. One env var is the whole integration:
  * `VITE_OTLP_ENDPOINT`. Everything else has a sane default.
  */

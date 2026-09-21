@@ -1,63 +1,72 @@
 # React Observability Demo
 
-A React dashboard that instruments itself with real OpenTelemetry and then visualises the result.
-The browser is the observed system: this app emits genuine OTLP spans, metrics and logs about
-**its own** page loads, fetches, clicks and rendering performance, exports them to an OpenTelemetry
-backend, and reads them back into its own UI.
+**A React dashboard that instruments itself with real OpenTelemetry, exports that telemetry to a
+real OTel backend, and then reads it back into its own UI.**
 
-![The dashboard](docs/screenshot-overview.png)
+The browser is the observed system. Click a row, and a genuine span for that click appears in the
+trace waterfall — real trace id, real duration, exported over OTLP/HTTP to a Grafana-Tempo-Prometheus-Loki
+stack and then queried back out of it.
+
+[![The dashboard](docs/screenshot-overview.png)](https://react-observability-demo.vercel.app)
+
+**Live demo → <https://react-observability-demo.vercel.app>**
+*(export is switched off there — see [what's real](#whats-real-and-what-isnt) and the note in the app's own header)*
 
 ---
 
-## Read this first: what is real and what is not
+## At a glance
 
-This project contains two completely different kinds of data, and it would be easy to write a
-README that lets you blur them together. So, plainly:
+| | |
+|---|---|
+| **What it is** | A production-shaped observability UI, plus the instrumentation that feeds it |
+| **The interesting part** | The telemetry is real. React 19 emits OTLP spans, metrics and logs about itself |
+| **Stack** | React 19 · TypeScript · Vite · Tailwind CSS 4 · TanStack Query · OpenTelemetry JS 2.x · Radix UI |
+| **Runs on** | Vercel (SPA + serverless simulator) · any OTel backend (local LGTM, or Grafana Cloud) |
+| **Size** | ~8,000 lines of TypeScript across 54 files, no test suite yet |
+| **Try it** | `git clone` → `npm install` → `cp .env.example .env` → `docker compose up -d` → `npm run dev` |
+
+**What this demonstrates.** Instrumenting a browser application properly — not just adding a tracking
+snippet, but wiring the OTel SDK end to end, choosing where context propagates and where it cannot,
+teeing real spans into a UI, and then being honest about which numbers are measured and which are
+generated. The UI work is React 19 with `useSyncExternalStore`, TanStack Query for server state, and
+Radix primitives for accessibility.
+
+---
+
+## What's real and what isn't
+
+This project contains two completely different kinds of data, and it would be easy to write a README
+that lets you blur them together. So, plainly:
 
 | | Real | Simulated |
 |---|---|---|
 | **What** | Telemetry about **this browser tab** | A fictional microservice estate |
 | **Source** | The OpenTelemetry SDK, running in your page | `simulator/`, generated from a seeded PRNG |
 | **Signals** | Traces, metrics, logs, exported over OTLP/HTTP | Service health, incidents, latency series served as JSON |
-| **Where it goes** | The configured OTLP endpoint → an OpenTelemetry Collector → Tempo / Prometheus / Loki | Nowhere. It is generated on request by the Vercel functions in `api/` |
+| **Goes where** | OTLP endpoint → Collector → Tempo / Prometheus / Loki | Nowhere. Generated per request by the Vercel functions |
 | **In the UI** | Green **`real`** tag | Blue **`simulated`** tag |
 
 **The telemetry is simulated.** There is no production system behind this dashboard. The service
 fleet, its latency percentiles, its error budgets and its incidents are fabricated by
-`simulator/engine.ts`. Nothing is scraped, nothing is measured, and no real request is ever served
-by any of the nineteen services in the fleet table.
+`simulator/engine.ts`. Nothing is scraped and nothing is measured.
 
-**What is genuinely real** is the instrumentation. `@opentelemetry/sdk-trace-web`,
-`@opentelemetry/sdk-metrics`, `@opentelemetry/sdk-logs` and the OTLP HTTP exporters are all in
-`package.json` and all doing real work. Open DevTools, click something, and watch a real
-`POST /v1/traces` leave your browser. Those spans have real trace ids and real durations, and they
-land in a real collector.
+**What is genuinely real is the instrumentation.** `@opentelemetry/sdk-trace-web`, `sdk-metrics`,
+`sdk-logs` and the OTLP HTTP exporters are all doing real work. Open DevTools, click something, and
+watch a real `POST /v1/traces` leave your browser. Those spans have real trace ids and real durations.
 
-Every panel that displays data is tagged with its provenance on screen, not just here. If you ever
-cannot tell which kind of data you are looking at, that is a bug — please open an issue.
+Every panel is tagged with its provenance **on screen**, not just here. If you ever can't tell which
+kind of data you're looking at, that's a bug — please open an issue.
 
 ### On the acronym
 
-The conventional expansion of "LGTM" is **L**oki, **G**rafana, **T**empo, **M**imir. The
-[`grafana/otel-lgtm`](https://github.com/grafana/docker-otel-lgtm) image used here bundles **Prometheus**,
-not Mimir. So this README says **Prometheus** everywhere. The acronym is not a claim about which
-backend is running, and calling it "Mimir" because it fits the letters would be a lie about the
-stack.
-
-Actually running in that container:
-
-| Component | Role |
-|---|---|
-| OpenTelemetry Collector | Receives OTLP on `4317` (gRPC) and `4318` (HTTP) |
-| **Prometheus** | Metrics |
-| Tempo | Traces |
-| Loki | Logs |
-| Pyroscope | Profiles |
-| Grafana | The UI, on `3000` |
+"LGTM" conventionally expands to **L**oki, **G**rafana, **T**empo, **M**imir. The
+[`grafana/otel-lgtm`](https://github.com/grafana/docker-otel-lgtm) image used here bundles
+**Prometheus**, not Mimir. So this README says **Prometheus** everywhere. The acronym is not a claim
+about which backend is running.
 
 ---
 
-## Quickstart
+## Quick start
 
 Requires Node ≥ 22.12 and Docker.
 
@@ -71,78 +80,72 @@ docker compose up -d      # the OpenTelemetry backend
 npm run dev               # the app
 ```
 
-Open <http://localhost:5173>, click around, then open <http://localhost:3000> and log in with
-`admin` / `admin`. Explore → Tempo → Search, and filter by `service.name = react-observability-demo`.
+Open <http://localhost:5173>, click around, then open <http://localhost:3000> (Grafana, `admin` /
+`admin`) and go to **Explore → Tempo**:
 
-The `cp` is not optional if you want to see anything in Grafana. `VITE_OTLP_ENDPOINT` has no
-built-in default: an unset endpoint means no exporters are constructed, and the app will tell you so
-in the header ("OTLP off") rather than pretending. That is deliberate — a browser bundle that
-silently ships to `localhost` in production would be worse than one that ships nowhere.
+```
+{ resource.service.name = "react-observability-demo" }
+```
+
+The `cp` is not optional if you want anything in Grafana. `VITE_OTLP_ENDPOINT` has no built-in
+default: an unset endpoint means no exporters are constructed, and the app says so in its header
+rather than pretending. That's deliberate — a browser bundle that silently ships to `localhost` in
+production would be worse than one that ships nowhere.
 
 ### No Docker?
 
-Docker needs virtualisation enabled in your firmware. If you cannot run it, you can still verify
-that the export pipeline genuinely works, because the app exports standard OTLP and you can point it
-at anything that speaks it:
+Docker needs virtualisation enabled in your firmware. If you can't run it there are two fallbacks:
 
 ```bash
-node tools/otlp-sink.mjs      # a dependency-free OTLP/HTTP receiver that prints what it gets
-npm run dev
+node tools/otlp-sink.mjs      # a dependency-free OTLP receiver that prints what it gets
 ```
 
-You will see real span names, trace ids, attributes and metric data points scroll past. That proves
-the instrumentation and the wire format; what you lose is Grafana itself.
+You'll see real span names, trace ids, attributes and metric data points scroll past. That proves the
+instrumentation and the wire format; what you lose is Grafana itself.
 
-If you want the real thing without Docker, `tools/native-stack/` downloads the same five components
-as bare Windows binaries into a throwaway directory, runs them, and can be deleted afterwards.
-See the README there.
+For the full stack without Docker, `tools/native-stack/` downloads the same five components as bare
+Windows binaries into a throwaway directory, runs them, and can be deleted afterwards. This is how
+the Grafana results below were verified on a machine where Docker cannot start at all.
 
 ---
 
-## What the app does
+## What you'll see
 
 Five routes, each labelled with the provenance of what it shows:
 
-- **Overview** — the simulated fleet (19 services, health, latency percentiles, saturation, error
-  budgets), the real instruments this tab has recorded, a simulated incident feed, and a live trace
-  waterfall of spans this browser just emitted.
-- **Traces** — two tabs, one dedicated to *real* spans teed out of the OTel SDK, one to *simulated*
-  traces. Identical rendering, different data source, and the difference is stated on the page.
-- **Metrics** — real instruments read out of the SDK's own aggregation state, real Core Web Vitals,
-  a raw instrument explorer, and the fabricated Prometheus-style estate series.
-- **Incidents** — the fabricated incident feed with timelines and severity laddering.
-- **Observability** — the page that has to be checkable: resolved configuration, export-pipeline
-  health, an explicit force-flush button, the live log stream, and copy-pasteable Grafana queries.
+- **Overview** — the simulated fleet, real instruments this tab recorded, a simulated incident feed,
+  and a live waterfall of spans this browser just emitted
+- **Traces** — real spans from the OTel SDK in one tab, simulated estate traces in the other.
+  Same rendering, different data source, and the difference is stated on the page
+- **Metrics** — real instruments read out of the SDK's own aggregation state, real Core Web Vitals, a
+  raw instrument explorer, and the fabricated estate series
+- **Incidents** — the fabricated feed with timelines and severity laddering
+- **Observability** — the page that has to be checkable: resolved config, export-pipeline health, a
+  force-flush button, the live log stream, and copy-pasteable Grafana queries
 
-The Traces view escalates in three steps rather than dumping everything at once: a **list** to scan
-and filter, an **inline waterfall** to see the shape of one trace in place, and a **drawer** for
-inspecting a single span without losing the page you were on.
+### The trace drill-down
 
-![The trace drawer](docs/screenshot-trace-drawer.png)
+Three steps, increasing in cost: a **list** to scan, an **inline waterfall** to see one trace's shape
+in place, and a **drawer** to inspect a single span without losing your page.
 
-The drawer is a real OpenTelemetry waterfall, not a mock-up of one. The trace above is 99 genuine
-spans the browser emitted for one page load — `documentLoad` → `documentFetch` → 97 concurrent
-`resourceFetch` children — and only two of them are marked **crit**, meaning only those two actually
-determined how long the load took. The 97 concurrent fetches ran underneath them and never extended
-the critical path. Selecting a span shows its ids, parent, timing, attributes and events, including
-the real navigation timeline (`fetchStart` → `secureConnectionStart` → `requestStart` →
+[![The trace drawer](docs/screenshot-trace-drawer.png)](docs/screenshot-trace-drawer.png)
+
+That trace is 99 genuine spans the browser emitted for one page load — `documentLoad` →
+`documentFetch` → 97 concurrent `resourceFetch` children. Only two are marked **crit**: only those
+two determined how long the load took, while the 97 concurrent fetches ran underneath and never
+extended the critical path. Selecting a span shows its ids, parent, timing, attributes and events,
+including the real navigation timeline (`fetchStart` → `secureConnectionStart` → `requestStart` →
 `responseStart` → `responseEnd`).
 
-There is one write action: the scenario picker in the header. Choosing a scenario POSTs to
-`/api/simulate` and swaps the whole simulated estate atomically.
-
-Because real spans stream in continuously, the trace list has a **Live / Paused** control, and
-opening a trace freezes the list automatically — otherwise rows re-sort every second and move out
-from under the cursor. The drawer also holds its own reference to the trace it opened rather than an
-id it re-looks-up, because the in-browser span buffer is a bounded ring: a trace opened a minute ago
-can be evicted entirely, and an id-based lookup would then silently resolve to whatever had taken its
-place.
+Because real spans stream in continuously, the list has a **Live / Paused** control and opening a
+trace freezes it automatically — otherwise rows re-sort every second and move out from under your
+cursor.
 
 ---
 
-## How the instrumentation works
+## How it works
 
-Everything lives in `src/observability/`. It is the part of this repo worth reading.
+Everything lives in `src/observability/`. It's the part of this repo worth reading.
 
 ### The browser really is the observed system
 
@@ -152,7 +155,7 @@ observed. It sets up three real SDK providers and four automatic instrumentation
 | Instrumentation | What it produces |
 |---|---|
 | `document-load` | `documentLoad`, `documentFetch`, `resourceFetch` spans with real navigation timing |
-| `fetch` | a span per HTTP request, nested correctly under the app's own span |
+| `fetch` | a span per HTTP request, nested under the app's own span |
 | `user-interaction` | a span per click and submit |
 | `long-task` | a span whenever the main thread blocks long enough to hurt INP |
 
@@ -161,186 +164,99 @@ On top of that, `src/api/client.ts` adds a named span for every backend call, an
 
 ### Reading telemetry back out
 
-Two small pieces make the "read it back into a UI" half work, and both are worth calling out because
-neither is a stock SDK feature:
+Two small pieces make the "read it back into a UI" half work, and neither is a stock SDK feature:
 
-- **`spanStore.ts`** implements a `SpanProcessor` that tees every ended span into a bounded ring
-  buffer. The spans the waterfall renders are the same `ReadableSpan` objects the exporter sends —
-  not a fixture, not a re-fetch. Click a button and a real span appears.
-- **`metricStore.ts`** implements a `MetricReader` that pulls the SDK's aggregation state into the
-  UI on a timer. The SDK used to ship `InMemoryMetricReader` for exactly this; it is gone in the 2.x
-  line, so this is a ~40-line replacement.
+- **`spanStore.ts`** — a `SpanProcessor` that tees every ended span into a bounded ring buffer. The
+  spans the waterfall renders are the same `ReadableSpan` objects the exporter sends. Not a fixture,
+  not a re-fetch.
+- **`metricStore.ts`** — a `MetricReader` that pulls the SDK's aggregation state into the UI on a
+  timer. The SDK used to ship `InMemoryMetricReader` for this; it's gone in the 2.x line, so this is
+  a ~40-line replacement.
 
-Because the UI reader and the OTLP exporter are both registered against the same `MeterProvider`,
-the numbers on screen and the numbers in Prometheus come from the same instruments and the same
+Because the UI reader and the OTLP exporter are both registered against the same `MeterProvider`, the
+numbers on screen and the numbers in Prometheus come from the same instruments and the same
 recordings. Only the destination differs.
 
-### `exportStats.ts`
+### Why browser OTel needs `exportStats.ts`
 
-Browser OTel fails silently by default: a wrong URL, a stopped collector or a CORS rejection all
-look identical to a working app, because exporter errors go to diagnostics and nowhere else. This
-module wraps each exporter in a `Proxy` that records every batch attempt, success or failure, and
-surfaces it in the UI. It is the difference between "we send telemetry" and "we can show you it
-arrived".
-
----
-
-## Deliberate tradeoffs
-
-These are choices, not oversights. They are listed here so you can disagree with them.
-
-**No zone.js.** The default `StackContextManager` is used rather than `ZoneContextManager`. zone.js
-would propagate context across `await` boundaries, but it patches `Promise`, timers and every event
-target in the page — a heavy, invasive dependency. Instead, `withSpan` invokes `fetch` before its
-first `await`, so the fetch instrumentation always sees the active span and nests correctly. You can
-see this working in the verification output below, where the instrumentation's `GET` span carries an
-explicit `parent=` pointing at the app's own span. The cost is that context does not survive a stray
-`await` mid-span.
-
-One thing worth knowing if you go looking: `zone.js` *will* appear in `node_modules`. It is declared
-as an optional peer dependency of `@opentelemetry/instrumentation-user-interaction`, and npm
-installs peers automatically. Nothing imports it, and it is tree-shaken out of the build — every
-`zone.js` marker is absent from the shipped assets. Installed is not the same as used.
-
-**Scenario state lives in the browser.** An earlier design kept "the active scenario" in module scope
-on the server. That works on a warm serverless instance and silently resets on a cold one, which is
-the worst possible bug class for a demo. The client now owns the selection and passes `?scenario=` to
-every endpoint.
-
-**The serverless functions are not instrumented.** Short-lived functions flush spans unreliably, and
-the point of this project is observing the browser. Instrumenting them would add noise and undermine
-the claim rather than support it.
-
-**Recharts is a third of the bundle.** `charts` is ~387 kB raw / ~111 kB gzipped of a ~1.08 MB /
-~325 kB gzipped total. That is a lot for four chart types, and hand-rolled SVG would be leaner. It is
-kept because it is a legitimate, widely-used library whose import is visible in `package.json`.
-
-**The dev-server trace is huge.** Vite serves every module separately, so `document-load` produces a
-resource span per module in development. In a production build the same trace is a handful of spans.
+Browser OTel fails silently by default. A wrong URL, a stopped collector and a CORS rejection all look
+identical to a working app, because exporter errors go to diagnostics and nowhere else. This module
+wraps each exporter in a `Proxy` that records every batch attempt, success or failure, and surfaces it
+in the UI. It's the difference between "we send telemetry" and "we can show you it arrived".
 
 ---
 
-## Verify it yourself
-
-Every claim above is checkable. The app ships the queries on its Observability page.
-
-**Traces — Grafana → Explore → Tempo**
+## Project structure
 
 ```
-{ resource.service.name = "react-observability-demo" }
-```
+src/
+  observability/        the real OTel wiring — start here
+    config.ts             env resolution, OTLP signal URL construction
+    tracing.ts            WebTracerProvider, instrumentations, withSpan
+    metrics.ts            MeterProvider, app instruments, observable gauge
+    logger.ts             LoggerProvider, tees records into a UI ring buffer
+    spanStore.ts          SpanProcessor → ring buffer (real spans in the UI)
+    metricStore.ts        MetricReader → UI snapshots
+    exportStats.ts        export health, visible in the UI
+    webVitals.ts          real Core Web Vitals as OTel histograms
 
-You should see `documentLoad`, `HTTP GET /api/services`, `scenario.switch`, `click` and `longtask`
-spans, each with a real trace id, and the app's own spans containing the instrumentation's spans as
-children.
-
-**Metrics — Grafana → Explore → Prometheus**
-
-```
-app_api_client_duration_milliseconds_count
-app_api_client_requests_total
-browser_web_vitals_lcp_milliseconds_bucket
-app_telemetry_spans_buffered
-```
-
-**Logs — Grafana → Explore → Loki**
-
-```
-{ service_name = "react-observability-demo" }
-```
-
-Every API call and scenario switch emits a record. Records emitted inside a span carry that span's
-trace id, so you can jump from a log line to its trace.
-
-### What was verified, and how
-
-The instrumentation was verified end-to-end against a real OTLP receiver, not assumed:
-
-```
-✓ documentLoad                    67.0ms   react-observability-demo  via @opentelemetry/instrumentation-document-load
-  trace=23f625f9ce97a9fbb52622d1cac1e8ba span=6d43438301a62f22 (root)
-✓ HTTP GET /services             185.0ms   react-observability-demo  via react-observability-demo
-  trace=f90b3506aecb96f20ef1d0efc4901cc1 span=d4effd6184b4eec2 (root)
-  app.api.boundary=src/api/client.ts  app.api.route=/services  http.response.status_code=200
-✓ GET                            158.0ms   react-observability-demo  via @opentelemetry/instrumentation-fetch
-  trace=f90b3506aecb96f20ef1d0efc4901cc1 span=1ea0758a1f3e44a4 parent=d4effd6184b4eec2   ← nested correctly
-✓ app.api.client.duration        histogram n=3 mean=152.00
-✓ app.ui.interactions            sum value=2
-✓ app.telemetry.spans_buffered   gauge value=103
-✓ browser.web_vitals.fcp         histogram n=1 mean=208.00
-DEBUG API GET /services ok in 1.6ms  react-observability-demo
-```
-
-This confirms: real OTLP/HTTP to the correct signal paths, correct parent/child span nesting across
-the instrumentation boundary, custom instruments recording and exporting, and logs carrying trace
-context.
-
-The deployed build was verified the same way, against production rather than localhost: all five
-`/api/*` functions return 200 with real payloads, every deep link serves the SPA, driving the
-scenario picker through the browser moves the estate (steady state 19/19 healthy → cache stampede
-15 healthy / 2 degraded / 2 critical, SLO meeting → breaching), and the console is clean.
-
-**Grafana rendering the data was verified on a native Windows build of the stack**, not
-`docker-compose.yml` — the authoring machine has virtualisation disabled in firmware and cannot start
-Docker at all (`WSL2 is unable to start since virtualisation is not enabled on this machine`). The
-same components and versions were run as bare Windows binaries — Grafana 13.2.2, Prometheus 3.14.0,
-Tempo 3.0.3, Loki 3.7.8, OTel Collector 0.161.0, which are exactly the versions inside the
-`grafana/otel-lgtm` image — and a browser visit produced spans visible in Grafana:
-
-- **Tempo**, queried from Grafana with TraceQL `{ resource.service.name = "react-observability-demo" }`,
-  returned the app's own spans (`HTTP GET /services`, `HTTP GET /incidents`, `longtask`).
-- Opening one showed the expected nesting in Grafana's waterfall: `react-observability-demo: HTTP GET
-  /services` (22ms, GET 200) with the fetch instrumentation's `GET` span as its child. That is the
-  parent/child relationship this README claims, rendered by Grafana rather than by this project's
-  own UI.
-
-![The same spans in Grafana](docs/screenshot-grafana-trace.png)
-- **Prometheus** held the real instruments — `app_api_client_duration_milliseconds_count` (4 series),
-  `app_api_client_requests_total`, `app_ui_interactions_total`, `app_telemetry_spans_buffered` (126),
-  and `browser_web_vitals_fcp/ttfb_milliseconds_count`.
-- **Loki** held the log records, each carrying its resource attributes (`service_name`,
-  `browser_timezone=Europe/London`, `deployment_environment_name`) and structured metadata including
-  `app_api_route` and `http_response_status_code`.
-
-The one thing still not exercised is `docker-compose.yml` itself, since Docker cannot run here. The
-native setup used to close this gap is kept in `tools/native-stack/` for anyone else in the same
-position.
-
----
-
-## Repository layout
-
-```
-observability/          ← src/observability/ — the real OTel wiring
-  config.ts               env resolution, signal URL construction
-  tracing.ts              WebTracerProvider, instrumentations, withSpan
-  metrics.ts              MeterProvider, app instruments, observable gauge
-  logger.ts               LoggerProvider, tees records into a UI ring buffer
-  spanStore.ts            SpanProcessor → bounded ring buffer (real spans in the UI)
-  metricStore.ts          MetricReader → UI snapshots (replaces InMemoryMetricReader)
-  exportStats.ts          export health, visible in the UI
-  webVitals.ts            real Core Web Vitals as OTel histograms
-  types.ts                view models shared by real and simulated data
-
-api/client.ts           ← src/api/client.ts — the single backend boundary
-hooks/                  ← src/hooks/ — TanStack Query wrappers + store subscriptions
-  useServices.ts  useTelemetry.ts  useIncidents.ts  useDebounce.ts  useTelemetryStore.ts
-components/
-  ServiceTable.tsx  MetricsPanel.tsx  IncidentFeed.tsx  TraceViewer.tsx
-
-simulator/              Fabricated estate. Shared types, not a service. No I/O, no state.
-  types.ts  catalog.ts  scenarios.ts  engine.ts  random.ts
+  api/client.ts         the single backend boundary — every fetch goes through it
+  hooks/                TanStack Query wrappers + useSyncExternalStore subscriptions
+  components/           ServiceTable · MetricsPanel · IncidentFeed · TraceViewer
+    trace/                the shared waterfall, span detail panel and drawer
+  pages/                one file per route
 
 api/                    Vercel functions serving the simulator
-  services.ts  metrics.ts  traces.ts  incidents.ts  simulate.ts
   _lib/http.ts            Node-native request/response helpers
 
-tools/otlp-sink.mjs     Dependency-free OTLP receiver, for when Docker is unavailable
+simulator/              fabricated estate. Shared types, not a service. No I/O, no state.
+tools/
+  otlp-sink.mjs           dependency-free OTLP receiver, for when Docker is unavailable
+  native-stack/           run the LGTM stack as bare binaries
 ```
 
-`simulator/` sits at the repository root because it is shared by two consumers that must agree
-exactly: the Vercel functions that serve it, and the React app, which imports its **types** so the
-client boundary is typed against the same contract the server implements.
+`simulator/` sits at the repo root because it's shared by two consumers that must agree exactly: the
+Vercel functions that serve it, and the React app, which imports its **types** so the client boundary
+is typed against the same contract the server implements.
+
+---
+
+## Contributing
+
+Issues and PRs are welcome. A few things that will make a PR easy to land:
+
+**Before you start.** `npm run typecheck` and `npm run build` must both pass — CI-equivalent checks,
+both run by `npm run build`. There is no test suite; verification here is typecheck, build, and
+looking at the app.
+
+**The one rule that matters.** Keep the real/simulated distinction honest. If a change makes a
+fabricated number look measured, or labels real telemetry as fake, it will be rejected regardless of
+how good it looks. Every panel carries a provenance tag and that has to stay true.
+
+**Adding a scenario to the simulator.** Add an object to `simulator/scenarios.ts`. The engine applies
+`perService` overrides over `global` over the catalog baselines and knows nothing about specific
+scenarios, so no engine change should be needed.
+
+**Adding a service to the fleet.** Add an entry to `simulator/catalog.ts` with its baseline profile.
+The derived counts in the UI update themselves; only prose that names a specific number would need a
+look.
+
+**Changing the design system.** All colour and type tokens live in the `@theme` block of
+`src/index.css` — change them there, not inline in components. Two constraints are load-bearing:
+every text tier clears WCAG AA (4.5:1), and the semantic green/amber/red are **reserved for health
+status**. There's a separate categorical `--color-series-*` palette for chart and span colours, so a
+span bar can never be mistaken for a health state.
+
+**Useful things to know.**
+
+- Never use the semantic colours for anything but state
+- Numbers go through `.tnum` for tabular figures, so columns don't jitter as values update
+- `api/` and `simulator/` imports need explicit `.js` extensions — see below
+- Read `AGENTS.md`-style conventions are not used here; the code comments carry the reasoning
+
+**Good first contributions.** Point the demo at a Grafana Cloud stack and document it. Add a
+scenario. Improve the mobile layout of the waterfall. Add a real test suite — that would be genuinely
+valuable and doesn't exist yet.
 
 ---
 
@@ -350,35 +266,28 @@ One variable is the whole integration. Everything else has a sane default.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `VITE_OTLP_ENDPOINT` | *(empty)* | Base OTLP/HTTP endpoint. Empty disables export; the app still runs and says so. |
+| `VITE_OTLP_ENDPOINT` | *(empty)* | Base OTLP/HTTP endpoint. Empty disables export; the app says so. |
 | `VITE_OTLP_HEADERS` | *(empty)* | `key=value,key2=value2` sent as OTLP headers. Required for Grafana Cloud. |
 | `VITE_SERVICE_NAME` | `react-observability-demo` | `service.name` resource attribute. |
-| `VITE_SERVICE_VERSION` | `0.1.0` | `service.version`. |
+| `VITE_SERVICE_VERSION` | from `package.json` | `service.version`. Injected at build time — setting it pins a literal that will go stale. |
 | `VITE_DEPLOYMENT_ENVIRONMENT` | Vite mode | `deployment.environment.name`. |
 | `VITE_TRACES_SAMPLE_RATE` | `1` | Head sampling ratio, 0–1. |
 | `VITE_METRIC_EXPORT_INTERVAL` | `10000` | Metric export interval, ms. |
 | `VITE_GRAFANA_URL` | *(empty)* | Adds an "Open in Grafana" link in the header. |
 
-See `.env.example`.
-
 > **Security note.** Anything in a `VITE_*` variable is compiled into the browser bundle and readable
 > by anyone who loads the page. Use a write-only, ingest-scoped token for `VITE_OTLP_HEADERS` and
-> nothing else. This is why the hosted demo runs with export disabled unless a disposable token is
-> supplied.
+> nothing else. This is why the hosted demo runs with export disabled.
 
 ---
 
 ## Deployment
 
-**Vercel** hosts the SPA and the serverless simulator functions. **LGTM is not on Vercel** — it is
-supplied at runtime, either by `docker-compose.yml` for local use or by a Grafana Cloud gateway URL
-for a hosted demo. There are no containers in the Vercel deployment.
+**Vercel** hosts the SPA and the serverless simulator functions. **LGTM is not on Vercel** — it's
+supplied at runtime, either by `docker-compose.yml` or by a Grafana Cloud gateway URL. There are no
+containers in the Vercel deployment.
 
-The live deployment is <https://react-observability-demo.vercel.app>. It runs with
-`VITE_OTLP_ENDPOINT` unset, so it exports nothing and says so in its header — see the security note
-above, and the note on the demo page itself.
-
-To point a deployment at Grafana Cloud:
+To export from a deployment:
 
 ```env
 VITE_OTLP_ENDPOINT=https://otlp-gateway-<zone>.grafana.net/otlp
@@ -386,44 +295,94 @@ VITE_OTLP_HEADERS=Authorization=Basic <base64(instanceId:token)>
 VITE_GRAFANA_URL=https://<your-stack>.grafana.net
 ```
 
-Set these in the Vercel project, redeploy, and the same code exports there instead. Nothing else
-changes.
-
-The Vercel functions are written against plain Node `IncomingMessage` / `ServerResponse`, which is
-the one signature that works unchanged in both runtimes this project runs in: the Vercel Node
-runtime in production, and the Vite dev-server middleware in `vite.config.ts` during development.
-That is what makes a fresh clone work with `npm run dev` and no `vercel dev`, no account, and no
-network.
+Set these in the Vercel project and redeploy. Nothing else changes.
 
 ### Two things that only fail on Vercel
 
-Both of these cost real debugging time, and neither reproduces locally. They are recorded here so
-they cost you none.
+Both cost real debugging time and neither reproduces locally, so they're written down.
 
-**Vercel does not bundle serverless functions.** It transpiles each `api/*.ts` to `api/*.js`
-individually — stripping types but leaving the ESM syntax alone — and then Node resolves the module
-graph itself at runtime. Under ESM every relative specifier must name a real file *with its
-extension*, so `from '../simulator'` fails with `ERR_UNSUPPORTED_DIR_IMPORT` and `from './engine'`
-fails with `ERR_MODULE_NOT_FOUND`. All specifiers in `api/` and `simulator/` therefore carry
-explicit paths:
-
-```ts
-import { buildServices } from '../simulator/index.js'   // directory → its index
-import { sendJson } from './_lib/http.js'               // file → extension
-```
-
-`tools/esm-specifiers.mjs` is the codemod that applied this and will re-apply it if the rule is
-broken again. Removing `"type": "module"` to force CommonJS does *not* work — the emitted file still
-contains `import` statements, and Node then rejects it with "Cannot use import statement outside a
-module".
+**Vercel does not bundle serverless functions.** It transpiles each `api/*.ts` individually —
+stripping types but leaving the ESM syntax alone — and Node then resolves the module graph at
+runtime. Under ESM every relative specifier must name a real file *with its extension*, so
+`from '../simulator'` fails with `ERR_UNSUPPORTED_DIR_IMPORT`. All specifiers in `api/` and
+`simulator/` therefore carry explicit paths, and `tools/esm-specifiers.mjs` is the codemod that
+applied it. Note that removing `"type": "module"` to force CommonJS does **not** work — the emitted
+file still contains `import` statements.
 
 **`vercel deploy` uploads `.env` regardless of `.gitignore`.** The CLI reads dotenv files from the
-working directory and injects them as build-time environment variables. Deploying from a machine
-that has a local `.env` pointing at `localhost:4318` bakes that into the production bundle, so every
-visitor's browser tries to export telemetry to its own machine — twelve `ERR_CONNECTION_REFUSED`
-per page load and a header reading "awaiting export" instead of "OTLP off". `.vercelignore` excludes
-dotenv files for exactly this reason. A build driven by the Git integration never sees it, because a
-fresh checkout has no `.env`.
+working directory and injects them as build-time variables, which once baked
+`VITE_OTLP_ENDPOINT=http://localhost:4318` into production — so every visitor's browser tried to
+export telemetry to its own machine. `.vercelignore` excludes dotenv files for exactly this reason.
+
+---
+
+## Verification
+
+Claims in this README were checked by running them, not by assuming.
+
+**The instrumentation was verified against a real OTLP receiver:**
+
+```
+✓ documentLoad                    67.0ms   via @opentelemetry/instrumentation-document-load
+  trace=23f625f9ce97a9fbb52622d1cac1e8ba span=6d43438301a62f22 (root)
+✓ HTTP GET /services             185.0ms   via react-observability-demo
+  app.api.route=/services  http.response.status_code=200
+✓ GET                            158.0ms   via @opentelemetry/instrumentation-fetch
+  parent=d4effd6184b4eec2   ← nested under the app's own span
+✓ app.api.client.duration        histogram n=3 mean=152.00
+✓ browser.web_vitals.fcp         histogram n=1 mean=208.00
+```
+
+That confirms real OTLP/HTTP to the correct signal paths, correct parent/child nesting across the
+instrumentation boundary, custom instruments recording, and logs carrying trace context.
+
+**Grafana rendering the data** was verified against a native build of the stack (Docker cannot start
+on the authoring machine — virtualisation is disabled in firmware). Grafana 13.2.2, Prometheus 3.14.0,
+Tempo 3.0.3, Loki 3.7.8 and Collector 0.161.0 — the exact versions inside the `otel-lgtm` image:
+
+- **Tempo** returned the app's own spans, and opening one showed `HTTP GET /services` (22ms, GET 200)
+  with the fetch instrumentation's `GET` span nested inside it:
+
+  ![The same spans in Grafana](docs/screenshot-grafana-trace.png)
+
+- **Prometheus** held `app_api_client_duration_milliseconds_count` (4 series),
+  `app_telemetry_spans_buffered` (126), and the browser web vitals
+- **Loki** held the log records with their resource attributes and structured metadata
+
+**The deployed build** was verified against production: all five functions return 200, every deep
+link serves the SPA, driving the scenario picker moves the estate, and the console is clean.
+
+**Not verified:** `docker-compose.yml` itself has never been executed, because Docker cannot run on
+the machine this was built on. `docker compose config` validates it, the ports match the image's
+`EXPOSE` set, and the same components were run natively — but the compose path specifically is
+untested. If it fails for you, that's a bug worth reporting.
+
+---
+
+## Tradeoffs
+
+These are choices, not oversights.
+
+**No zone.js.** The default `StackContextManager` is used rather than `ZoneContextManager`. zone.js
+would propagate context across `await` boundaries, but it patches `Promise`, timers and every event
+target in the page. Instead, `withSpan` invokes `fetch` before its first `await`, so the fetch
+instrumentation always sees the active span and nests correctly — you can see that working in the
+verification output above. The cost is that context does not survive a stray `await` mid-span. (If
+you go looking, `zone.js` *will* appear in `node_modules` — it's an optional peer of
+`instrumentation-user-interaction` that npm installs and nothing imports; it is tree-shaken out.)
+
+**Scenario state lives in the browser.** An earlier design kept it in module scope on the server,
+which works on a warm serverless instance and silently resets on a cold one — the worst possible bug
+class for a demo. The client owns the selection and passes `?scenario=` to every endpoint.
+
+**The serverless functions are not instrumented.** Short-lived functions flush spans unreliably, and
+the point is observing the browser. Instrumenting them would add noise and undermine the claim.
+
+**Recharts is a third of the bundle** (~111 kB gzipped of ~330 kB). That's a lot for four chart types,
+and hand-rolled SVG would be leaner. Kept because it's a legitimate, widely-used library.
+
+**The dev-server trace is huge.** Vite serves every module separately, so `document-load` produces a
+resource span per module in development. A production build produces a handful.
 
 ---
 
@@ -436,14 +395,16 @@ npm run typecheck    # tsc --noEmit
 npm run preview      # serve the production build
 npm run lgtm:up      # docker compose up -d
 npm run lgtm:down    # docker compose down
-node tools/otlp-sink.mjs   # OTLP receiver without Docker
+
+node tools/otlp-sink.mjs        # OTLP receiver without Docker
+tools/native-stack/fetch.ps1    # full LGTM stack as native binaries
 ```
 
 ## Stack
 
-React 19.3 · Vite 8.3 · TypeScript 5.9 · Tailwind CSS 4.3 · TanStack Query 5 ·
-OpenTelemetry JS SDK 2.11 / exporters 0.222 · Radix UI · lucide-react · Recharts · web-vitals
+React 19.3 · Vite 8.3 · TypeScript 5.9 · Tailwind CSS 4.3 · TanStack Query 5 · OpenTelemetry JS SDK
+2.11 / exporters 0.222 · Radix UI · lucide-react · Recharts · web-vitals
 
 ## Licence
 
-MIT
+MIT — see [LICENSE](LICENSE).

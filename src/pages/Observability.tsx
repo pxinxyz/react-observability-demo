@@ -27,7 +27,12 @@ import {
 } from '@/components/ui/primitives'
 import { useExportStats, useLogRecords, useMetricCollection } from '@/hooks'
 import { useObservabilityStatus } from '@/hooks/useObservabilityStatus'
-import { clearTelemetryBuffers, flushTelemetry, recordInteraction } from '@/observability'
+import {
+  clearTelemetryBuffers,
+  flushTelemetry,
+  observabilityConfig,
+  recordInteraction,
+} from '@/observability'
 import type { FlushReport } from '@/observability'
 import { logSeverityTone } from '@/lib/telemetry'
 import { cn, formatNumber, formatRelative, formatTimestamp } from '@/lib/utils'
@@ -579,7 +584,7 @@ function LogStreamPanel() {
 /* ── Setup ───────────────────────────────────────────────────────────────── */
 
 function SetupPanel({ status }: { status: ReturnType<typeof useObservabilityStatus> }) {
-  const grafana = status.grafanaUrl ?? 'http://localhost:3000'
+  const grafana = status.grafanaUrl ?? observabilityConfig.defaultGrafanaUrl
 
   return (
     <div className="flex flex-col gap-4">
