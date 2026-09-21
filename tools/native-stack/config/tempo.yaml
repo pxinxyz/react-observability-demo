@@ -1,0 +1,34 @@
+# Tempo — traces.
+#
+# Runs as a single binary with local (filesystem) block storage. OTLP comes in
+# on 4320 from the collector; Grafana queries it on 3200.
+#
+# Kept deliberately minimal. Tempo 3.x rejects unknown keys outright
+# ("field X not found in type app.Config"), and the compactor/querier blocks
+# that older examples show are no longer top-level config, so they are omitted
+# and their defaults apply.
+#
+# gRPC is on 9096, not the default 9095, because Loki's default gRPC port is
+# also 9095 and the two would collide.
+
+stream_over_http_enabled: true
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9096
+  log_level: warn
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 127.0.0.1:4320
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: __ROOT__/data/tempo/blocks
+    wal:
+      path: __ROOT__/data/tempo/wal

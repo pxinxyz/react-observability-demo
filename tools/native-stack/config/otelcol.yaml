@@ -1,0 +1,69 @@
+# OpenTelemetry Collector — the single OTLP front door.
+#
+# The app sends all three signals to one base endpoint (VITE_OTLP_ENDPOINT,
+# appending /v1/traces, /v1/metrics, /v1/logs). Tempo accepts only traces,
+# Prometheus only metrics, Loki only logs, so the collector receives everything
+# and fans it out. This is the same shape as the grafana/otel-lgtm image.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 127.0.0.1:4317
+      http:
+        endpoint: 127.0.0.1:4318
+        # The browser posts from a different origin (the Vite dev server on
+        # :5173, or the deployed site), so the receiver must answer preflights.
+        # Without this the collector silently drops every batch.
+        cors:
+          allowed_origins:
+            - "http://localhost:5173"
+            - "http://127.0.0.1:5173"
+            - "https://react-observability-demo.vercel.app"
+          allowed_headers:
+            - "*"
+
+processors:
+  batch:
+    timeout: 1s
+
+exporters:
+  # Tempo accepts OTLP natively, so traces go straight in — no conversion.
+  otlp/tempo:
+    endpoint: 127.0.0.1:4320
+    tls:
+      insecure: true
+
+  # Prometheus 3.x has a built-in OTLP receiver; the exporter appends
+  # /v1/metrics to this base path.
+  otlphttp/prometheus:
+    endpoint: http://127.0.0.1:9090/api/v1/otlp
+
+  # Loki's OTLP receiver lives at /otlp/v1/logs.
+  otlphttp/loki:
+    endpoint: http://127.0.0.1:3100/otlp
+
+  # Echoes what it receives to the collector's stdout. This is the single most
+  # useful thing when wiring a stack up for the first time.
+  debug:
+    verbosity: detailed
+
+service:
+  telemetry:
+    logs:
+      level: warn
+    metrics:
+      level: none
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/tempo, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/prometheus, debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki, debug]

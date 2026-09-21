@@ -37,3 +37,7 @@ pnpm-debug.log*
 *.tsbuildinfo
 
 .vercel
+
+# Native LGTM stack scratch directory (tools/native-stack)
+.lgtm-native/
+

@@ -1,0 +1,45 @@
+# Loki — logs.
+#
+# Single-binary, filesystem-backed. The OTLP receiver is exposed at
+# /otlp/v1/logs once structured metadata is allowed.
+#
+# instance_addr is pinned to 127.0.0.1 on purpose. Left to itself Loki
+# auto-detects a host address and picked a virtual adapter (10.5.0.2), then
+# spent the whole run logging i/o timeouts trying to reach its own ingester
+# there. Pinning it keeps every internal hop on loopback.
+#
+# gRPC stays on 9095 (Loki's default); Tempo was moved to 9096 instead.
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9095
+  log_level: warn
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: __ROOT__/data/loki
+  storage:
+    filesystem:
+      chunks_directory: __ROOT__/data/loki/chunks
+      rules_directory: __ROOT__/data/loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  # The OTLP endpoint is rejected unless structured metadata is permitted.
+  allow_structured_metadata: true
+  volume_enabled: true

@@ -93,6 +93,10 @@ npm run dev
 You will see real span names, trace ids, attributes and metric data points scroll past. That proves
 the instrumentation and the wire format; what you lose is Grafana itself.
 
+If you want the real thing without Docker, `tools/native-stack/` downloads the same five components
+as bare Windows binaries into a throwaway directory, runs them, and can be deleted afterwards.
+See the README there.
+
 ---
 
 ## What the app does
@@ -255,11 +259,31 @@ The deployed build was verified the same way, against production rather than loc
 scenario picker through the browser moves the estate (steady state 19/19 healthy → cache stampede
 15 healthy / 2 degraded / 2 critical, SLO meeting → breaching), and the console is clean.
 
-**Not verified by the author:** Grafana rendering the data, because the machine this was built on has
-virtualisation disabled in firmware and cannot start Docker at all (`WSL2 is unable to start since
-virtualisation is not enabled on this machine`). The collector-side path is the part that was
-exercised; the Grafana-side path is standard `otel-lgtm` behaviour and is what `docker compose up -d`
-gives you. Treat it as documented-but-unverified-here rather than as a claim.
+**Grafana rendering the data was verified on a native Windows build of the stack**, not
+`docker-compose.yml` — the authoring machine has virtualisation disabled in firmware and cannot start
+Docker at all (`WSL2 is unable to start since virtualisation is not enabled on this machine`). The
+same components and versions were run as bare Windows binaries — Grafana 13.2.2, Prometheus 3.14.0,
+Tempo 3.0.3, Loki 3.7.8, OTel Collector 0.161.0, which are exactly the versions inside the
+`grafana/otel-lgtm` image — and a browser visit produced spans visible in Grafana:
+
+- **Tempo**, queried from Grafana with TraceQL `{ resource.service.name = "react-observability-demo" }`,
+  returned the app's own spans (`HTTP GET /services`, `HTTP GET /incidents`, `longtask`).
+- Opening one showed the expected nesting in Grafana's waterfall: `react-observability-demo: HTTP GET
+  /services` (22ms, GET 200) with the fetch instrumentation's `GET` span as its child. That is the
+  parent/child relationship this README claims, rendered by Grafana rather than by this project's
+  own UI.
+
+![The same spans in Grafana](docs/screenshot-grafana-trace.png)
+- **Prometheus** held the real instruments — `app_api_client_duration_milliseconds_count` (4 series),
+  `app_api_client_requests_total`, `app_ui_interactions_total`, `app_telemetry_spans_buffered` (126),
+  and `browser_web_vitals_fcp/ttfb_milliseconds_count`.
+- **Loki** held the log records, each carrying its resource attributes (`service_name`,
+  `browser_timezone=Europe/London`, `deployment_environment_name`) and structured metadata including
+  `app_api_route` and `http_response_status_code`.
+
+The one thing still not exercised is `docker-compose.yml` itself, since Docker cannot run here. The
+native setup used to close this gap is kept in `tools/native-stack/` for anyone else in the same
+position.
 
 ---
 

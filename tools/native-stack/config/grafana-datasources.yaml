@@ -1,0 +1,61 @@
+# Grafana datasource provisioning.
+#
+# Drop-in: Grafana reads every *.yaml under
+# conf/provisioning/datasources/ at startup, so no clicking required and the
+# wiring is the same on every run.
+#
+# The three uids are pinned rather than generated, so the correlations below can
+# reference them. Grafana otherwise assigns random uids.
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://127.0.0.1:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s
+      # Prometheus 3.x wants this for the newer query paths.
+      httpMethod: POST
+
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://127.0.0.1:3200
+    jsonData:
+      # Jump from a span to the logs emitted during it, and to the service
+      # graph in Prometheus. This is the reason to run all three together.
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-1m'
+        spanEndTimeShift: '1m'
+        filterByTraceID: true
+        filterBySpanID: false
+        tags:
+          - key: service.name
+            value: service_name
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://127.0.0.1:3100
+    jsonData:
+      maxLines: 500
+      derivedFields:
+        # Click a trace id in a log line to open the trace in Tempo. This is
+        # what makes the "log records carry trace context" claim usable rather
+        # than merely true.
+        - name: TraceID
+          matcherRegex: '"trace_id":"(\w+)"'
+          url: '$${__value.raw}'
+          datasourceUid: tempo
+          matcherType: regex
