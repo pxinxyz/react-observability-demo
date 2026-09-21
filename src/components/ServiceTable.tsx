@@ -229,6 +229,13 @@ export function ServiceTable({
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <StatusDot tone={tone} pulse={service.health === 'critical'} />
+                          {/*
+                            Health is encoded as dot colour, which is invisible to a
+                            screen reader and ambiguous for a colour-blind reader. The
+                            label is hidden visually but present in the accessibility
+                            tree, so the row reads as "critical inventory-api".
+                          */}
+                          <span className="sr-only">{service.health}</span>
                           <span className="truncate font-medium text-ink">{service.name}</span>
                           <ChevronRight
                             className={cn(

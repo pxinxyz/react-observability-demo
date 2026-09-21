@@ -315,6 +315,10 @@ export function TraceViewer({
                   >
                     <div className="flex items-center gap-2">
                       <StatusDot tone={trace.status === 'error' ? 'crit' : 'ok'} />
+                      {/* Colour alone would hide the status from assistive tech. */}
+                      <span className="sr-only">
+                        {trace.status === 'error' ? 'error' : 'ok'}
+                      </span>
                       <span className="truncate text-xs font-medium text-ink">{trace.title}</span>
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-subtle">
