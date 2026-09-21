@@ -169,14 +169,14 @@ function SourceTab({
     <Tabs.Trigger
       value={value}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors',
+        'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium transition-colors',
         'text-subtle hover:text-muted',
         'data-[state=active]:bg-raised data-[state=active]:text-ink',
       )}
     >
       <Icon className="size-3.5" aria-hidden />
       {label}
-      <span className="tnum rounded bg-canvas/70 px-1 font-mono text-[10px] text-subtle">
+      <span className="tnum rounded bg-canvas/70 px-1 font-mono text-2xs text-subtle">
         {count}
       </span>
     </Tabs.Trigger>

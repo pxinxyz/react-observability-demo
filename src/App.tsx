@@ -54,8 +54,8 @@ function NotFoundPage() {
   return (
     <Panel className="mx-auto mt-12 flex max-w-lg flex-col items-center gap-3 px-6 py-12 text-center">
       <Compass className="size-6 text-subtle" aria-hidden />
-      <h2 className="text-sm font-semibold text-ink">No such route</h2>
-      <p className="text-xs leading-relaxed text-subtle">
+      <h2 className="text-base font-semibold text-ink">No such route</h2>
+      <p className="text-sm leading-relaxed text-subtle">
         That URL is not part of the dashboard. The 404 is still a real page view though — the route
         observer recorded it as a metric and the router change as a span.
       </p>

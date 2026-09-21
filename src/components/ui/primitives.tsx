@@ -57,9 +57,9 @@ export function PanelHeader({
       <div className="flex min-w-0 items-start gap-2.5">
         {Icon ? <Icon className="mt-0.5 size-4 shrink-0 text-subtle" aria-hidden /> : null}
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold tracking-tight text-ink">{title}</h2>
+          <h2 className="text-base font-semibold tracking-tight text-ink">{title}</h2>
           {subtitle ? (
-            <p className="mt-0.5 text-xs leading-relaxed text-subtle">{subtitle}</p>
+            <p className="mt-0.5 text-sm leading-relaxed text-subtle">{subtitle}</p>
           ) : null}
         </div>
       </div>
@@ -93,7 +93,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium leading-4',
+        'inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs font-medium leading-4',
         TONE_CLASSES[tone],
         mono && 'font-mono',
         className,
@@ -167,7 +167,7 @@ export function Button({
       className={cn(
         'inline-flex items-center justify-center gap-1.5 rounded border border-transparent font-medium transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-45',
-        size === 'sm' ? 'px-2 py-1 text-[11px]' : 'px-2.5 py-1.5 text-xs',
+        size === 'sm' ? 'px-2 py-1 text-xs' : 'px-2.5 py-1.5 text-sm',
         variants[variant],
         className,
       )}
@@ -191,7 +191,7 @@ export function InfoTip({ children, label }: { children: ReactNode; label: strin
       <Tooltip.Portal>
         <Tooltip.Content
           sideOffset={6}
-          className="z-50 max-w-xs rounded-md border border-edge-strong bg-raised px-2.5 py-2 text-xs leading-relaxed text-muted shadow-xl"
+          className="z-50 max-w-xs rounded-md border border-edge-strong bg-raised px-2.5 py-2 text-sm leading-relaxed text-muted shadow-xl"
         >
           {children}
           <Tooltip.Arrow className="fill-[var(--color-edge-strong)]" />
@@ -229,11 +229,11 @@ export function Stat({
   }
   return (
     <div className={cn('min-w-0', className)}>
-      <div className="text-[11px] font-medium uppercase tracking-wider text-subtle">{label}</div>
+      <div className="text-xs font-medium uppercase tracking-wider text-subtle">{label}</div>
       <div className={cn('tnum mt-1 text-xl font-semibold leading-none', valueTone[tone])}>
         {value}
       </div>
-      {hint ? <div className="mt-1 text-xs text-subtle">{hint}</div> : null}
+      {hint ? <div className="mt-1 text-sm text-subtle">{hint}</div> : null}
     </div>
   )
 }
@@ -284,7 +284,7 @@ export function ProvenanceTag({ kind }: { kind: 'real' | 'simulated' }) {
       <Tooltip.Trigger asChild>
         <span
           className={cn(
-            'inline-flex cursor-help items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide',
+            'inline-flex cursor-help items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-2xs uppercase tracking-wide',
             isReal
               ? 'border-ok/30 bg-ok/10 text-ok'
               : 'border-info/30 bg-info/10 text-info',
@@ -300,7 +300,7 @@ export function ProvenanceTag({ kind }: { kind: 'real' | 'simulated' }) {
       <Tooltip.Portal>
         <Tooltip.Content
           sideOffset={6}
-          className="z-50 max-w-xs rounded-md border border-edge-strong bg-raised px-2.5 py-2 text-xs leading-relaxed text-muted shadow-xl"
+          className="z-50 max-w-xs rounded-md border border-edge-strong bg-raised px-2.5 py-2 text-sm leading-relaxed text-muted shadow-xl"
         >
           {isReal ? (
             <>
@@ -335,8 +335,8 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
       {Icon ? <Icon className="size-6 text-subtle" aria-hidden /> : null}
-      <p className="text-sm font-medium text-muted">{title}</p>
-      <p className="max-w-md text-xs leading-relaxed text-subtle">{description}</p>
+      <p className="text-base font-medium text-muted">{title}</p>
+      <p className="max-w-md text-sm leading-relaxed text-subtle">{description}</p>
       {action ? <div className="mt-1">{action}</div> : null}
     </div>
   )
@@ -345,8 +345,8 @@ export function EmptyState({
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-center">
-      <p className="text-sm font-medium text-crit">Request failed</p>
-      <p className="max-w-md font-mono text-xs leading-relaxed text-subtle">{message}</p>
+      <p className="text-base font-medium text-crit">Request failed</p>
+      <p className="max-w-md font-mono text-sm leading-relaxed text-subtle">{message}</p>
       {onRetry ? (
         <Button variant="outline" size="sm" onClick={onRetry} className="mt-1">
           Retry

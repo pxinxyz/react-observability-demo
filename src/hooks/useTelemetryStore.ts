@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   exportStats,
   logStore,
@@ -33,9 +33,24 @@ export function useSpans(): SpanRecord[] {
   return useSyncExternalStore(spanStore.subscribe, spanStore.getSpans, spanStore.getSpans)
 }
 
-/** The same spans, grouped into per-trace trees ready for the waterfall. */
-export function useSpanTrees(): SpanTree[] {
-  return useSyncExternalStore(spanStore.subscribe, spanStore.getTrees, spanStore.getTrees)
+/**
+ * The same spans, grouped into per-trace trees ready for the waterfall.
+ *
+ * `paused` freezes the returned list while spans keep arriving underneath. Real
+ * telemetry streams in continuously, so an unpaused list re-sorts every second
+ * and moves rows out from under the cursor — which makes a list genuinely hard
+ * to click and makes an open detail view jump to a different trace. Pausing is
+ * what real observability tools offer for exactly this reason.
+ */
+export function useSpanTrees(paused = false): SpanTree[] {
+  const live = useSyncExternalStore(spanStore.subscribe, spanStore.getTrees, spanStore.getTrees)
+  const [frozen, setFrozen] = useState(live)
+
+  useEffect(() => {
+    if (!paused) setFrozen(live)
+  }, [live, paused])
+
+  return paused ? frozen : live
 }
 
 /** Metric data points pulled from the SDK's own aggregation state. */

@@ -170,7 +170,7 @@ export function ServiceTable({
                 onChange={(event) => setRawFilter(event.target.value)}
                 placeholder="Filter…"
                 aria-label="Filter services"
-                className="w-36 rounded border border-edge bg-canvas/60 py-1 pl-7 pr-2 text-xs text-ink placeholder:text-subtle focus:border-accent/50 focus:outline-none"
+                className="w-36 rounded border border-edge bg-canvas/60 py-1 pl-7 pr-2 text-sm text-ink placeholder:text-subtle focus:border-accent/50 focus:outline-none"
               />
             </div>
           </>
@@ -178,7 +178,7 @@ export function ServiceTable({
       />
 
       <div className="scroll-thin min-h-0 flex-1 overflow-auto">
-        <table className="w-full border-collapse text-left text-xs">
+        <table className="w-full border-collapse text-left text-sm">
           <thead className="sticky top-0 z-10 bg-panel/95 backdrop-blur">
             <tr className="border-b border-edge">
               {COLUMNS.map((column) => (
@@ -187,7 +187,7 @@ export function ServiceTable({
                   scope="col"
                   title={column.hint}
                   className={cn(
-                    'whitespace-nowrap px-3 py-2 font-medium text-subtle',
+                    'whitespace-nowrap px-2.5 py-1.5 font-medium text-subtle',
                     column.align === 'right' && 'text-right',
                   )}
                 >
@@ -223,7 +223,7 @@ export function ServiceTable({
                     isSelected ? 'bg-raised' : 'hover:bg-raised/60',
                   )}
                 >
-                  <td className="px-3 py-2">
+                  <td className="px-2.5 py-1.5">
                     <div className="flex items-center gap-2">
                       <Icon className="size-3.5 shrink-0 text-subtle" aria-hidden />
                       <div className="min-w-0">
@@ -245,7 +245,7 @@ export function ServiceTable({
                             aria-hidden
                           />
                         </div>
-                        <div className="mt-0.5 truncate font-mono text-[10px] text-subtle">
+                        <div className="mt-0.5 truncate font-mono text-2xs text-subtle">
                           {SERVICE_KIND_LABEL[service.kind]} · {service.language} · v
                           {service.version}
                         </div>
@@ -253,18 +253,18 @@ export function ServiceTable({
                     </div>
                   </td>
 
-                  <td className="px-3 py-2 text-subtle">
+                  <td className="px-2.5 py-1.5 text-subtle">
                     <Badge tone="neutral" mono>
                       T{service.tier}
                     </Badge>
                   </td>
 
-                  <td className="tnum px-3 py-2 text-right text-muted">
+                  <td className="tnum px-2.5 py-1.5 text-right text-muted">
                     {formatCompact(service.requestRate)}
                     <span className="ml-0.5 text-subtle">/s</span>
                   </td>
 
-                  <td className="tnum px-3 py-2 text-right">
+                  <td className="tnum px-2.5 py-1.5 text-right">
                     <span
                       className={cn(
                         service.errorRate >= 0.05
@@ -278,7 +278,7 @@ export function ServiceTable({
                     </span>
                   </td>
 
-                  <td className="tnum px-3 py-2 text-right text-muted">
+                  <td className="tnum px-2.5 py-1.5 text-right text-muted">
                     <span className="text-ink">{formatDuration(service.p50Ms)}</span>
                     <span className="mx-1 text-subtle">/</span>
                     {formatDuration(service.p95Ms)}
@@ -286,7 +286,7 @@ export function ServiceTable({
                     {formatDuration(service.p99Ms)}
                   </td>
 
-                  <td className="px-3 py-2">
+                  <td className="px-2.5 py-1.5">
                     <div className="flex items-center justify-end gap-2">
                       <span className="tnum w-9 text-right text-muted">
                         {formatPercent(service.saturation, 0)}
@@ -299,7 +299,7 @@ export function ServiceTable({
                     </div>
                   </td>
 
-                  <td className="px-3 py-2">
+                  <td className="px-2.5 py-1.5">
                     <div className="flex items-center justify-end gap-2">
                       <span className="tnum w-9 text-right text-muted">
                         {formatPercent(service.slo.budgetRemaining, 0)}
@@ -345,29 +345,29 @@ function ServiceDetail({ service }: { service?: ServiceSnapshot }) {
     <div className="border-t border-edge bg-canvas/40 px-4 py-3">
       <div className="grid gap-4 md:grid-cols-3">
         <div>
-          <div className="text-[11px] font-medium uppercase tracking-wider text-subtle">
+          <div className="text-xs font-medium uppercase tracking-wider text-subtle">
             Last deploy
           </div>
-          <div className="mt-1 text-xs text-muted">
+          <div className="mt-1 text-sm text-muted">
             {formatRelative(service.lastDeployAt)}
-            <span className="ml-1.5 font-mono text-[10px] text-subtle">
+            <span className="ml-1.5 font-mono text-2xs text-subtle">
               {new Date(service.lastDeployAt).toISOString().slice(0, 16).replace('T', ' ')}
             </span>
           </div>
         </div>
 
         <div>
-          <div className="text-[11px] font-medium uppercase tracking-wider text-subtle">
+          <div className="text-xs font-medium uppercase tracking-wider text-subtle">
             Instances
           </div>
-          <div className="tnum mt-1 text-xs text-muted">{service.instances} replicas</div>
+          <div className="tnum mt-1 text-sm text-muted">{service.instances} replicas</div>
         </div>
 
         <div>
-          <div className="text-[11px] font-medium uppercase tracking-wider text-subtle">
+          <div className="text-xs font-medium uppercase tracking-wider text-subtle">
             Availability SLO
           </div>
-          <div className="tnum mt-1 text-xs text-muted">
+          <div className="tnum mt-1 text-sm text-muted">
             target {(service.slo.target * 100).toFixed(2)}%
             <span className="mx-1.5 text-subtle">·</span>
             observed {formatPercent(1 - service.errorRate, 3)}
@@ -377,7 +377,7 @@ function ServiceDetail({ service }: { service?: ServiceSnapshot }) {
 
       {dependencies ? (
         <div className="mt-3">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-subtle">
+          <div className="text-xs font-medium uppercase tracking-wider text-subtle">
             Calls
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -389,7 +389,7 @@ function ServiceDetail({ service }: { service?: ServiceSnapshot }) {
           </div>
         </div>
       ) : (
-        <div className="mt-3 text-[11px] text-subtle">
+        <div className="mt-3 text-xs text-subtle">
           Leaf service — calls nothing downstream.
         </div>
       )}

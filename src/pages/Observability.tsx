@@ -95,7 +95,7 @@ export function ObservabilityPage() {
               key={value}
               value={value}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors',
+                'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium transition-colors',
                 'text-subtle hover:text-muted',
                 'data-[state=active]:bg-raised data-[state=active]:text-ink',
               )}
@@ -210,7 +210,7 @@ function PipelinePanel() {
           <div>
             <p
               className={cn(
-                'text-xs font-medium',
+                'text-sm font-medium',
                 health.tone === 'ok' && 'text-ok',
                 health.tone === 'warn' && 'text-warn',
                 health.tone === 'crit' && 'text-crit',
@@ -219,7 +219,7 @@ function PipelinePanel() {
             >
               {health.label}
             </p>
-            <p className="mt-0.5 text-[11px] leading-relaxed text-subtle">{health.detail}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-subtle">{health.detail}</p>
           </div>
         </div>
 
@@ -240,7 +240,7 @@ function PipelinePanel() {
 
         {stats.lastError ? (
           <div className="border-t border-edge bg-crit/5 px-4 py-2.5">
-            <p className="flex items-start gap-2 font-mono text-[11px] leading-relaxed text-crit">
+            <p className="flex items-start gap-2 font-mono text-xs leading-relaxed text-crit">
               <AlertTriangle className="mt-0.5 size-3 shrink-0" aria-hidden />
               {stats.lastError}
             </p>
@@ -249,7 +249,7 @@ function PipelinePanel() {
 
         {lastFlush ? (
           <div className="border-t border-edge px-4 py-2.5">
-            <p className="text-[11px] text-subtle">
+            <p className="text-xs text-subtle">
               Last manual flush:{' '}
               {lastFlush.timedOut ? (
                 <span className="text-warn">timed out before every provider finished</span>
@@ -265,7 +265,7 @@ function PipelinePanel() {
 
         {metrics.errors.length > 0 ? (
           <div className="border-t border-edge bg-warn/5 px-4 py-2.5">
-            <p className="text-[11px] text-warn">
+            <p className="text-xs text-warn">
               Metric collection reported {metrics.errors.length} non-fatal error
               {metrics.errors.length === 1 ? '' : 's'}: {metrics.errors.join('; ')}
             </p>
@@ -306,17 +306,17 @@ function PipelinePanel() {
                   <Badge tone={attempt.ok ? 'ok' : 'crit'} mono>
                     {attempt.signal}
                   </Badge>
-                  <span className="tnum font-mono text-[10px] text-subtle">
+                  <span className="tnum font-mono text-2xs text-subtle">
                     {attempt.itemCount} item{attempt.itemCount === 1 ? '' : 's'}
                   </span>
                 </span>
                 <span className="flex min-w-0 items-center gap-2">
                   {attempt.error ? (
-                    <span className="truncate font-mono text-[10px] text-crit" title={attempt.error}>
+                    <span className="truncate font-mono text-2xs text-crit" title={attempt.error}>
                       {attempt.error}
                     </span>
                   ) : null}
-                  <span className="tnum shrink-0 font-mono text-[10px] text-subtle">
+                  <span className="tnum shrink-0 font-mono text-2xs text-subtle">
                     {formatTimestamp(attempt.at)}
                   </span>
                 </span>
@@ -340,7 +340,7 @@ function Cell({ label, value, tone = 'neutral' }: { label: string; value: string
   }
   return (
     <div className="bg-panel px-4 py-3">
-      <div className="text-[11px] font-medium uppercase tracking-wider text-subtle">{label}</div>
+      <div className="text-xs font-medium uppercase tracking-wider text-subtle">{label}</div>
       <div className={cn('tnum mt-1 text-lg font-semibold', tones[tone])}>{value}</div>
     </div>
   )
@@ -397,7 +397,7 @@ function ConfigPanel({ status }: { status: ReturnType<typeof useObservabilitySta
             {status.instrumentations.map((name) => (
               <li key={name} className="flex items-center gap-2 px-4 py-2">
                 <CheckCircle2 className="size-3.5 text-ok" aria-hidden />
-                <code className="font-mono text-[11px] text-muted">{name}</code>
+                <code className="font-mono text-xs text-muted">{name}</code>
               </li>
             ))}
           </ul>
@@ -411,7 +411,7 @@ function ConfigPanel({ status }: { status: ReturnType<typeof useObservabilitySta
           subtitle="A deliberate tradeoff, documented rather than hidden."
         />
         <div className="px-4 py-3">
-          <p className="text-[11px] leading-relaxed text-subtle">
+          <p className="text-xs leading-relaxed text-subtle">
             The SDK is configured with the default <code className="font-mono">StackContextManager</code>{' '}
             rather than <code className="font-mono">ZoneContextManager</code>. zone.js would carry
             context across <code className="font-mono">await</code> boundaries, but it patches
@@ -445,10 +445,10 @@ function Row({ label, value, mono = false }: { label: string; value: string; mon
 
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-2">
-      <dt className="shrink-0 font-mono text-[11px] text-subtle">{label}</dt>
+      <dt className="shrink-0 font-mono text-xs text-subtle">{label}</dt>
       <dd className="flex min-w-0 items-center gap-2">
         <span
-          className={cn('truncate text-[11px] text-muted', mono && 'font-mono')}
+          className={cn('truncate text-xs text-muted', mono && 'font-mono')}
           title={value}
         >
           {value}
@@ -513,7 +513,7 @@ function LogStreamPanel() {
               onChange={(event) => setRawFilter(event.target.value)}
               placeholder="Filter…"
               aria-label="Filter log records"
-              className="w-32 rounded border border-edge bg-canvas/60 px-2 py-1 text-xs text-ink placeholder:text-subtle focus:border-accent/50 focus:outline-none"
+              className="w-32 rounded border border-edge bg-canvas/60 px-2 py-1 text-sm text-ink placeholder:text-subtle focus:border-accent/50 focus:outline-none"
             />
             <Button size="sm" variant="outline" onClick={clearTelemetryBuffers}>
               <Trash2 className="size-3" aria-hidden />
@@ -540,7 +540,7 @@ function LogStreamPanel() {
             return (
               <li key={`${record.timeMs}-${index}`} className="px-4 py-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="tnum font-mono text-[10px] text-subtle">
+                  <span className="tnum font-mono text-2xs text-subtle">
                     {new Date(record.timeMs).toLocaleTimeString('en-US', { hour12: false })}
                   </span>
                   <Badge tone={tone} mono>
@@ -548,20 +548,20 @@ function LogStreamPanel() {
                   </Badge>
                   {record.traceId ? (
                     <span
-                      className="truncate font-mono text-[10px] text-accent"
+                      className="truncate font-mono text-2xs text-accent"
                       title={`trace ${record.traceId} span ${record.spanId}`}
                     >
                       {record.traceId.slice(0, 16)}/{record.spanId?.slice(0, 8)}
                     </span>
                   ) : (
-                    <span className="font-mono text-[10px] text-subtle">no active span</span>
+                    <span className="font-mono text-2xs text-subtle">no active span</span>
                   )}
                 </div>
-                <p className="mt-1 text-xs leading-relaxed text-muted">{record.body}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted">{record.body}</p>
                 {Object.keys(record.attributes).length > 0 ? (
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
                     {Object.entries(record.attributes).map(([key, value]) => (
-                      <span key={key} className="font-mono text-[10px] text-subtle">
+                      <span key={key} className="font-mono text-2xs text-subtle">
                         {key}=<span className="text-muted">{String(value)}</span>
                       </span>
                     ))}
@@ -649,12 +649,12 @@ function SetupPanel({ status }: { status: ReturnType<typeof useObservabilityStat
           subtitle="Same code, different endpoint. No rebuild of anything but the env var."
         />
         <div className="px-4 py-3">
-          <pre className="scroll-thin overflow-x-auto rounded border border-edge bg-canvas/60 p-3 font-mono text-[11px] leading-relaxed text-muted">
+          <pre className="scroll-thin overflow-x-auto rounded border border-edge bg-canvas/60 p-3 font-mono text-xs leading-relaxed text-muted">
 {`VITE_OTLP_ENDPOINT=https://otlp-gateway-<zone>.grafana.net/otlp
 VITE_OTLP_HEADERS=Authorization=Basic <base64(instanceId:token)>
 VITE_GRAFANA_URL=https://<your-stack>.grafana.net`}
           </pre>
-          <p className="mt-3 text-[11px] leading-relaxed text-warn">
+          <p className="mt-3 text-xs leading-relaxed text-warn">
             Anything in a <code className="font-mono">VITE_*</code> variable is compiled into the
             browser bundle and readable by anyone who loads the page. Use a write-only,
             ingest-scoped token and nothing else. This is why the hosted demo runs with exporting
@@ -681,12 +681,12 @@ function Step({
 
   return (
     <li className="flex gap-3 px-4 py-3">
-      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-edge-strong bg-raised font-mono text-[10px] text-muted">
+      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-edge-strong bg-raised font-mono text-2xs text-muted">
         {index}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-ink">{title}</p>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-subtle">{body}</p>
+        <p className="text-sm font-medium text-ink">{title}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-subtle">{body}</p>
         <button
           type="button"
           onClick={() => {
@@ -698,7 +698,7 @@ function Step({
               () => undefined,
             )
           }}
-          className="mt-2 inline-flex items-center gap-2 rounded border border-edge bg-canvas/60 px-2 py-1 font-mono text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-ink"
+          className="mt-2 inline-flex items-center gap-2 rounded border border-edge bg-canvas/60 px-2 py-1 font-mono text-xs text-muted transition-colors hover:border-accent/40 hover:text-ink"
         >
           <span className="text-subtle">$</span>
           {command}
@@ -725,8 +725,8 @@ function Query({
   return (
     <div className="px-4 py-3">
       <Badge tone="accent">{signal}</Badge>
-      <p className="mt-1.5 text-[11px] leading-relaxed text-subtle">{body}</p>
-      <code className="mt-2 block overflow-x-auto rounded border border-edge bg-canvas/60 px-2 py-1.5 font-mono text-[11px] text-muted">
+      <p className="mt-1.5 text-xs leading-relaxed text-subtle">{body}</p>
+      <code className="mt-2 block overflow-x-auto rounded border border-edge bg-canvas/60 px-2 py-1.5 font-mono text-xs text-muted">
         {expression}
       </code>
     </div>

@@ -161,10 +161,10 @@ export function AppMetricsPanel({
           <div className="grid gap-4 border-t border-edge px-4 py-4 lg:grid-cols-2">
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-subtle">
+                <span className="text-xs font-medium uppercase tracking-wider text-subtle">
                   API latency · running mean
                 </span>
-                <span className="font-mono text-[10px] text-subtle">app.api.client.duration</span>
+                <span className="font-mono text-2xs text-subtle">app.api.client.duration</span>
               </div>
               <HistoryChart
                 points={history['app.api.client.duration'] ?? []}
@@ -175,10 +175,10 @@ export function AppMetricsPanel({
 
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-subtle">
+                <span className="text-xs font-medium uppercase tracking-wider text-subtle">
                   Latency distribution
                 </span>
-                <span className="font-mono text-[10px] text-subtle">explicit buckets, ms</span>
+                <span className="font-mono text-2xs text-subtle">explicit buckets, ms</span>
               </div>
               {buckets.length > 0 ? (
                 <div className="h-[120px]">
@@ -205,7 +205,7 @@ export function AppMetricsPanel({
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <p className="py-8 text-center text-xs text-subtle">
+                <p className="py-8 text-center text-sm text-subtle">
                   No histogram recordings yet.
                 </p>
               )}
@@ -268,7 +268,7 @@ function HistoryChart({
 
   if (points.length < 2) {
     return (
-      <p className="flex h-[120px] items-center justify-center text-xs text-subtle">
+      <p className="flex h-[120px] items-center justify-center text-sm text-subtle">
         Collecting… need at least two samples to draw a line.
       </p>
     )
@@ -340,12 +340,12 @@ function ChartTooltipContent({
   const raw = typeof item.value === 'number' ? item.value : Number(item.value ?? 0)
 
   return (
-    <div className="rounded border border-edge-strong bg-raised px-2 py-1.5 text-xs shadow-xl">
+    <div className="rounded border border-edge-strong bg-raised px-2 py-1.5 text-sm shadow-xl">
       <div className="tnum font-medium text-ink">
         {unit ? `${formatNumber(raw)}${unit}` : format ? format(raw) : formatNumber(raw, 2)}
       </div>
       {item.payload?.label ? (
-        <div className="mt-0.5 font-mono text-[10px] text-subtle">{item.payload.label}</div>
+        <div className="mt-0.5 font-mono text-2xs text-subtle">{item.payload.label}</div>
       ) : null}
     </div>
   )
@@ -421,14 +421,14 @@ function SeriesCard({ series }: { series: MetricSeries }) {
     <div className="bg-panel px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate font-mono text-[11px] text-muted">{series.name}</div>
-          <div className="mt-0.5 truncate text-[11px] text-subtle">{series.description}</div>
+          <div className="truncate font-mono text-xs text-muted">{series.name}</div>
+          <div className="mt-0.5 truncate text-xs text-subtle">{series.description}</div>
         </div>
         <div className="shrink-0 text-right">
-          <div className="tnum text-sm font-semibold text-ink">{format(last)}</div>
+          <div className="tnum text-base font-semibold text-ink">{format(last)}</div>
           <div
             className={cn(
-              'tnum text-[10px]',
+              'tnum text-2xs',
               change > 0.02 ? 'text-crit' : change < -0.02 ? 'text-ok' : 'text-subtle',
             )}
           >

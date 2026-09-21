@@ -148,7 +148,7 @@ function MetricExplorer({
 
       {errors.length > 0 ? (
         <div className="border-b border-edge bg-crit/5 px-4 py-2">
-          <p className="text-[11px] text-crit">
+          <p className="text-xs text-crit">
             SDK reported {errors.length} non-fatal collection {errors.length === 1 ? 'error' : 'errors'}:{' '}
             {errors.join('; ')}
           </p>
@@ -163,7 +163,7 @@ function MetricExplorer({
         />
       ) : (
         <div className="scroll-thin max-h-[28rem] overflow-auto">
-          <table className="w-full border-collapse text-left text-xs">
+          <table className="w-full border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-panel/95 backdrop-blur">
               <tr className="border-b border-edge text-subtle">
                 <th scope="col" className="px-3 py-2 font-medium">Instrument</th>
@@ -177,8 +177,8 @@ function MetricExplorer({
               {metrics.map((metric) => (
                 <tr key={metric.name} className="border-b border-edge/50 align-top">
                   <td className="px-3 py-2">
-                    <div className="font-mono text-[11px] text-ink">{metric.name}</div>
-                    <div className="mt-0.5 max-w-xl text-[10px] leading-relaxed text-subtle">
+                    <div className="font-mono text-xs text-ink">{metric.name}</div>
+                    <div className="mt-0.5 max-w-xl text-2xs leading-relaxed text-subtle">
                       {metric.description || '—'}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -220,7 +220,7 @@ function PointSummary({ metric }: { metric: ReturnType<typeof useMetricCollectio
       sum += point.sum ?? 0
     }
     return (
-      <div className="tnum font-mono text-[10px] leading-relaxed text-muted">
+      <div className="tnum font-mono text-2xs leading-relaxed text-muted">
         <div>n={formatNumber(count)}</div>
         <div className="text-subtle">
           mean {count > 0 ? formatNumber(sum / count, 1) : '—'}
@@ -232,7 +232,7 @@ function PointSummary({ metric }: { metric: ReturnType<typeof useMetricCollectio
 
   const total = metric.points.reduce((acc, point) => acc + (point.value ?? 0), 0)
   return (
-    <span className="tnum font-mono text-[11px] text-muted">
+    <span className="tnum font-mono text-xs text-muted">
       {formatNumber(total, total % 1 === 0 ? 0 : 2)}
       {metric.unit && metric.unit !== '{request}' && metric.unit !== '{span}' ? (
         <span className="ml-1 text-subtle">{metric.unit}</span>

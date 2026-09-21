@@ -114,14 +114,14 @@ export function IncidentFeed({
                           {incident.severity.toUpperCase()}
                         </Badge>
                         <Badge tone={status}>{incident.status}</Badge>
-                        <span className="font-mono text-[10px] text-subtle">{incident.id}</span>
+                        <span className="font-mono text-2xs text-subtle">{incident.id}</span>
                       </span>
 
-                      <span className="mt-1.5 block text-sm font-medium leading-snug text-ink">
+                      <span className="mt-1.5 block text-base font-medium leading-snug text-ink">
                         {incident.title}
                       </span>
 
-                      <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-subtle">
+                      <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-subtle">
                         <span className="inline-flex items-center gap-1">
                           <Clock className="size-3" aria-hidden />
                           {formatRelative(incident.startedAt)} · {incident.durationMinutes}m
@@ -142,7 +142,7 @@ export function IncidentFeed({
                 <Collapsible.Content>
                   <div className="border-t border-edge/60 bg-canvas/40 px-4 py-3">
                     {!compact ? (
-                      <p className="text-xs leading-relaxed text-muted">{incident.summary}</p>
+                      <p className="text-sm leading-relaxed text-muted">{incident.summary}</p>
                     ) : null}
 
                     <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -165,7 +165,7 @@ export function IncidentFeed({
                     </div>
 
                     <div className="mt-4">
-                      <div className="text-[11px] font-medium uppercase tracking-wider text-subtle">
+                      <div className="text-xs font-medium uppercase tracking-wider text-subtle">
                         Timeline
                       </div>
                       <ol className="mt-2 space-y-0">
@@ -180,10 +180,10 @@ export function IncidentFeed({
                     </div>
 
                     <div className="mt-3 rounded border border-edge bg-panel/60 px-3 py-2">
-                      <div className="text-[11px] font-medium uppercase tracking-wider text-subtle">
+                      <div className="text-xs font-medium uppercase tracking-wider text-subtle">
                         Impact
                       </div>
-                      <div className="tnum mt-1 text-xs text-muted">
+                      <div className="tnum mt-1 text-sm text-muted">
                         ~{formatNumber(incident.impact.affectedRequests)} requests affected at a
                         peak error rate of {formatPercent(incident.impact.peakErrorRate)}
                       </div>
@@ -202,8 +202,8 @@ export function IncidentFeed({
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[10px] font-medium uppercase tracking-wider text-subtle">{label}</div>
-      <div className="tnum mt-0.5 font-mono text-[11px] text-muted">{value}</div>
+      <div className="text-2xs font-medium uppercase tracking-wider text-subtle">{label}</div>
+      <div className="tnum mt-0.5 font-mono text-xs text-muted">{value}</div>
     </div>
   )
 }
@@ -222,12 +222,12 @@ function TimelineRow({ event, isLast }: { event: IncidentEvent; isLast: boolean 
 
       <div className={cn('min-w-0 pb-3', isLast && 'pb-0')}>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[10px] text-subtle">
+          <span className="font-mono text-2xs text-subtle">
             {new Date(event.at).toLocaleTimeString('en-US', { hour12: false })}
           </span>
           <Badge tone="neutral">{event.actor}</Badge>
         </div>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted">{event.note}</p>
+        <p className="mt-0.5 text-sm leading-relaxed text-muted">{event.note}</p>
       </div>
     </li>
   )
@@ -244,7 +244,7 @@ export function IncidentTicker({ incidents }: { incidents: Incident[] }) {
   return (
     <div
       className={cn(
-        'flex items-center gap-2 rounded border px-2.5 py-1.5 text-xs',
+        'flex items-center gap-2 rounded border px-2.5 py-1.5 text-sm',
         tone === 'crit'
           ? 'border-crit/40 bg-crit/10 text-crit'
           : 'border-warn/40 bg-warn/10 text-warn',

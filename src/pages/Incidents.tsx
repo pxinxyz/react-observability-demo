@@ -95,7 +95,7 @@ export function IncidentsPage() {
 
       {incidents.isError ? (
         <Panel className="p-4">
-          <p className="text-xs text-crit">Failed to load incidents: {incidents.error.message}</p>
+          <p className="text-sm text-crit">Failed to load incidents: {incidents.error.message}</p>
         </Panel>
       ) : (
         <IncidentFeed incidents={all} />
@@ -127,16 +127,16 @@ export function IncidentsPage() {
                 <span
                   className={
                     severityTone(severity) === 'crit'
-                      ? 'font-mono text-xs font-semibold text-crit'
+                      ? 'font-mono text-sm font-semibold text-crit'
                       : severityTone(severity) === 'warn'
-                        ? 'font-mono text-xs font-semibold text-warn'
-                        : 'font-mono text-xs font-semibold text-muted'
+                        ? 'font-mono text-sm font-semibold text-warn'
+                        : 'font-mono text-sm font-semibold text-muted'
                   }
                 >
                   {severity.toUpperCase()}
                 </span>
               </div>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-subtle">{description}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-subtle">{description}</p>
             </div>
           ))}
         </div>
@@ -152,7 +152,7 @@ export function IncidentsPage() {
         </Panel>
       ) : null}
 
-      <p className="text-[11px] leading-relaxed text-subtle">
+      <p className="text-xs leading-relaxed text-subtle">
         Impact estimates assume a fixed 420 req/s on the affected path and are computed as
         peak error rate × duration × request rate. They are illustrative, not measured. The peak
         error rates shown here ({formatPercent(stats.worst?.impact.peakErrorRate ?? 0)}) come from

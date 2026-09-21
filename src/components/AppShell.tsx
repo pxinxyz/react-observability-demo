@@ -38,16 +38,16 @@ export function AppShell() {
   return (
     <div className="app-backdrop flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-edge bg-canvas/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex size-7 shrink-0 items-center justify-center rounded border border-accent/30 bg-accent/10">
               <Radio className="size-4 text-accent" aria-hidden />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-sm font-semibold leading-tight tracking-tight text-ink">
+              <h1 className="truncate text-base font-semibold leading-tight tracking-tight text-ink">
                 React Observability Demo
               </h1>
-              <p className="truncate text-[11px] leading-tight text-subtle">
+              <p className="truncate text-xs leading-tight text-subtle">
                 The browser is the observed system
               </p>
             </div>
@@ -66,7 +66,7 @@ export function AppShell() {
                 href={status.grafanaUrl}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="inline-flex items-center gap-1.5 rounded border border-edge-strong px-2 py-1 text-[11px] text-muted transition-colors hover:border-accent/50 hover:text-ink"
+                className="inline-flex items-center gap-1.5 rounded border border-edge-strong px-2 py-1 text-xs text-muted transition-colors hover:border-accent/50 hover:text-ink"
               >
                 Grafana
                 <ExternalLink className="size-3" aria-hidden />
@@ -76,7 +76,7 @@ export function AppShell() {
           </div>
         </div>
 
-        <nav className="mx-auto max-w-[1600px] px-4 sm:px-6">
+        <nav className="mx-auto max-w-[1440px] px-4 sm:px-6">
           <ul className="scroll-thin -mb-px flex gap-1 overflow-x-auto">
             {NAV_ITEMS.map((item) => (
               <li key={item.to}>
@@ -85,7 +85,7 @@ export function AppShell() {
                   end={item.end}
                   className={({ isActive }) =>
                     cn(
-                      'inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-xs font-medium transition-colors',
+                      'inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors',
                       isActive
                         ? 'border-accent text-ink'
                         : 'border-transparent text-subtle hover:border-edge-strong hover:text-muted',
@@ -103,12 +103,12 @@ export function AppShell() {
 
       <SummaryStrip summary={summary} />
 
-      <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+      <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
         <Outlet />
       </main>
 
       <footer className="border-t border-edge px-4 py-3 sm:px-6">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-2 text-[11px] text-subtle">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 text-xs text-subtle">
           <p>
             Span, metric and log data about this page is real OpenTelemetry. The service estate
             shown in the tables is simulated — see the{' '}
@@ -143,7 +143,7 @@ function OtlpStatusBadge({
     return (
       <span
         title="VITE_OTLP_ENDPOINT is not set. The app runs, but exports nothing."
-        className="inline-flex items-center gap-1.5 rounded border border-edge-strong bg-raised px-2 py-1 text-[11px] text-subtle"
+        className="inline-flex items-center gap-1.5 rounded border border-edge-strong bg-raised px-2 py-1 text-xs text-subtle"
       >
         <StatusDot tone="neutral" />
         OTLP off
@@ -168,7 +168,7 @@ function OtlpStatusBadge({
     <span
       title={`${endpoint}\n\n${details}`}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded border px-2 py-1 text-[11px]',
+        'inline-flex items-center gap-1.5 rounded border px-2 py-1 text-xs',
         tone === 'ok' && 'border-ok/30 bg-ok/10 text-ok',
         tone === 'warn' && 'border-warn/30 bg-warn/10 text-warn',
         tone === 'crit' && 'border-crit/30 bg-crit/10 text-crit',
@@ -184,7 +184,7 @@ function SummaryStrip({ summary }: { summary: ReturnType<typeof useSummary> }) {
   if (!summary) {
     return (
       <div className="border-b border-edge bg-panel/40">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-2 px-4 py-2 text-[11px] text-subtle sm:px-6">
+        <div className="mx-auto flex max-w-[1440px] items-center gap-2 px-4 py-2 text-xs text-subtle sm:px-6">
           <Activity className="size-3.5 animate-pulse" aria-hidden />
           Loading estate…
         </div>
@@ -196,7 +196,7 @@ function SummaryStrip({ summary }: { summary: ReturnType<typeof useSummary> }) {
 
   return (
     <div className="border-b border-edge bg-panel/40">
-      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2 sm:px-6">
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2 sm:px-6">
         <Tile
           icon={CheckCircle2}
           tone="ok"
@@ -273,7 +273,7 @@ function Tile({
     crit: 'text-crit',
   }
   return (
-    <span className="inline-flex items-baseline gap-1.5 text-[11px]">
+    <span className="inline-flex items-baseline gap-1.5 text-xs">
       {Icon ? <Icon className={cn('size-3.5 self-center', tones[tone])} aria-hidden /> : null}
       <span className="text-subtle">{label}</span>
       <span className={cn('tnum font-medium', tones[tone])}>{value}</span>

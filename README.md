@@ -114,8 +114,29 @@ Five routes, each labelled with the provenance of what it shows:
 - **Observability** — the page that has to be checkable: resolved configuration, export-pipeline
   health, an explicit force-flush button, the live log stream, and copy-pasteable Grafana queries.
 
+The Traces view escalates in three steps rather than dumping everything at once: a **list** to scan
+and filter, an **inline waterfall** to see the shape of one trace in place, and a **drawer** for
+inspecting a single span without losing the page you were on.
+
+![The trace drawer](docs/screenshot-trace-drawer.png)
+
+The drawer is a real OpenTelemetry waterfall, not a mock-up of one. The trace above is 99 genuine
+spans the browser emitted for one page load — `documentLoad` → `documentFetch` → 97 concurrent
+`resourceFetch` children — and only two of them are marked **crit**, meaning only those two actually
+determined how long the load took. The 97 concurrent fetches ran underneath them and never extended
+the critical path. Selecting a span shows its ids, parent, timing, attributes and events, including
+the real navigation timeline (`fetchStart` → `secureConnectionStart` → `requestStart` →
+`responseStart` → `responseEnd`).
+
 There is one write action: the scenario picker in the header. Choosing a scenario POSTs to
 `/api/simulate` and swaps the whole simulated estate atomically.
+
+Because real spans stream in continuously, the trace list has a **Live / Paused** control, and
+opening a trace freezes the list automatically — otherwise rows re-sort every second and move out
+from under the cursor. The drawer also holds its own reference to the trace it opened rather than an
+id it re-looks-up, because the in-browser span buffer is a bounded ring: a trace opened a minute ago
+can be evicted entirely, and an id-based lookup would then silently resolve to whatever had taken its
+place.
 
 ---
 

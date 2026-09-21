@@ -1,29 +1,70 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens.
+ * Tokyo Night, applied as a dense data-UI system.
  *
- * A deliberately dark, dense "control room" palette — closer to Grafana or a
- * terminal than to a marketing page, because the thing being displayed is
- * operational data and the numbers should carry the colour, not the chrome.
+ * Two decisions worth stating, because both were measured rather than guessed.
+ *
+ * 1. CONTRAST. Tokyo Night's own `comment` colour (#565f89) is the obvious pick
+ *    for dimmed metadata, and it is unusable: 2.76:1 on this background, which
+ *    fails even the 3:1 large-text threshold. The three text tiers below were
+ *    chosen to satisfy the intended hierarchy while every tier still clears
+ *    WCAG AA (4.5:1) for normal text:
+ *
+ *      tier 1  #c0caf5  10.59:1   service names, metric values, latency/error
+ *      tier 2  #9aa2c4   6.79:1   labels, units, column headers
+ *      tier 3  #828aac   5.03:1   versions, runtime, hashes
+ *
+ *    Note the band is compressed: on a dark background you cannot get a wide
+ *    contrast spread and keep everything readable, so hierarchy leans on size
+ *    and weight as much as colour. That is why the type scale matters here.
+ *
+ * 2. TYPE SCALE. This is a dense scale, not Tailwind's default, and its floor
+ *    is 11px — nothing in this interface is smaller. The earlier version of
+ *    this file left 77 elements at 9-11px across a 1600px canvas, which read as
+ *    a page zoomed to ~80%. Raising the floor while tightening row padding
+ *    increases legibility and rows-per-screen at the same time.
+ *
+ * Token NAMES are unchanged from the previous theme, so components need no
+ * class changes to pick up Tokyo Night.
  */
 @theme {
-  --color-canvas: #080b11;
-  --color-panel: #0e131c;
-  --color-raised: #141b26;
-  --color-edge: #1c2533;
-  --color-edge-strong: #2a3648;
+  /* Surfaces — Tokyo Night bg / bg_dark / bg_highlight */
+  --color-canvas: #1a1b26;
+  --color-panel: #1f2335;
+  --color-raised: #292e42;
+  --color-edge: #2f3549;
+  --color-edge-strong: #3b4261;
 
-  --color-ink: #e8eef8;
-  --color-muted: #8a9ab3;
-  --color-subtle: #5a687f;
+  /* Text tiers, measured above */
+  --color-ink: #c0caf5;
+  --color-muted: #9aa2c4;
+  --color-subtle: #828aac;
 
-  --color-accent: #38bdf8;
-  --color-accent-dim: #0b4a63;
-  --color-ok: #34d399;
-  --color-warn: #fbbf24;
-  --color-crit: #fb7185;
-  --color-info: #a78bfa;
+  /* Accent: Tokyo Night blue. Navigation, active state, selection, controls.
+     Never a stand-in for health. */
+  --color-accent: #7aa2f7;
+  --color-accent-dim: #3d59a1;
+
+  /* Semantic state. Reserved for actual health, never decoration. */
+  --color-ok: #9ece6a;
+  --color-warn: #e0af68;
+  --color-crit: #f7768e;
+  --color-info: #bb9af7;
+
+  /* Dense type scale. 11px floor. */
+  --text-2xs: 0.6875rem; /* 11px — tier 3 metadata floor */
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem; /* 12px — tier 2 labels */
+  --text-xs--line-height: 1.0625rem;
+  --text-sm: 0.8125rem; /* 13px — table cells and body */
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem; /* 14px — emphasis */
+  --text-base--line-height: 1.375rem;
+  --text-lg: 1rem; /* 16px — panel titles */
+  --text-lg--line-height: 1.375rem;
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px — stat values */
 
   --font-mono:
     'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
@@ -38,16 +79,16 @@
 
   body {
     @apply bg-canvas text-ink;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'tnum';
+    font-feature-settings: 'cv02', 'cv03', 'cv04';
   }
 
-  /* Tabular numerals everywhere numbers are compared vertically. */
+  /* Tabular figures wherever numbers are compared vertically. */
   .tnum {
     font-variant-numeric: tabular-nums;
   }
 
   ::selection {
-    background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+    background: color-mix(in oklab, var(--color-accent) 32%, transparent);
   }
 
   :focus-visible {
@@ -57,24 +98,16 @@
 }
 
 @layer components {
-  /* A faint engineering grid, so large empty panels do not read as broken. */
+  /*
+   * The previous theme layered a radial accent glow behind the whole app. It is
+   * gone: it was decoration that competed with the data, and on a dashboard the
+   * status colours should be the only thing drawing the eye.
+   */
   .app-backdrop {
-    background-image:
-      radial-gradient(
-        ellipse 80% 60% at 50% -10%,
-        color-mix(in oklab, var(--color-accent) 9%, transparent),
-        transparent
-      ),
-      linear-gradient(to right, color-mix(in oklab, var(--color-edge) 55%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--color-edge) 55%, transparent) 1px, transparent 1px);
-    background-size:
-      100% 100%,
-      48px 48px,
-      48px 48px;
+    background-color: var(--color-canvas);
   }
 }
 
-/* Thin scrollbars, so long span and incident lists do not get chunky rails. */
 @layer utilities {
   .scroll-thin {
     scrollbar-width: thin;
@@ -95,19 +128,28 @@
     border-radius: 9999px;
   }
 
+  /*
+   * A slow pulse on critical status only. This is information rather than
+   * decoration — it marks a state that is actively worsening — so it is kept,
+   * but restrained, and disabled under reduced-motion.
+   */
   @keyframes pulse-dot {
     0%,
     100% {
       opacity: 1;
-      transform: scale(1);
     }
     50% {
-      opacity: 0.35;
-      transform: scale(0.82);
+      opacity: 0.4;
     }
   }
 
   .animate-pulse-dot {
-    animation: pulse-dot 1.8s ease-in-out infinite;
+    animation: pulse-dot 2.4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-pulse-dot {
+      animation: none;
+    }
   }
 }

@@ -34,8 +34,8 @@ export function ProvenanceBanner({
           <ProvenanceTag kind={tone} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-xs font-semibold text-ink">{title}</h2>
-          <p className="mt-1 text-[11px] leading-relaxed text-subtle">{body}</p>
+          <h2 className="text-sm font-semibold text-ink">{title}</h2>
+          <p className="mt-1 text-xs leading-relaxed text-subtle">{body}</p>
         </div>
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}

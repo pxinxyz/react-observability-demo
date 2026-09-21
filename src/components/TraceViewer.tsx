@@ -1,193 +1,27 @@
-import { useMemo, useState } from 'react'
-import type { ReactNode } from 'react'
-import * as Collapsible from '@radix-ui/react-collapsible'
-import { Check, ChevronDown, ChevronRight, Copy, ListTree, Search } from 'lucide-react'
-import type { SimulatedTrace, TraceSpan } from '@simulator/types'
-import type { SpanRecord, SpanTree } from '@/observability'
-import {
-  Badge,
-  Button,
-  EmptyState,
-  Panel,
-  PanelHeader,
-  StatusDot,
-  type Tone,
-} from '@/components/ui/primitives'
-import { spanStatusTone } from '@/lib/telemetry'
+import { useEffect, useMemo, useState } from 'react'
+import { Check, Copy, ListTree, Maximize2, Pause, Play, Search } from 'lucide-react'
+import { Badge, Button, EmptyState, Panel, PanelHeader, StatusDot } from '@/components/ui/primitives'
 import { cn, formatDuration, formatNumber, formatClock, shortId } from '@/lib/utils'
 import { useDebounce } from '@/hooks/useDebounce'
+import { TimelineRuler, SpanWaterfall } from './trace/SpanWaterfall'
+import { TraceDrawer } from './trace/TraceDrawer'
+import type { TraceViewerTrace, WaterfallSpan } from './trace/model'
 
 /**
- * A trace waterfall that does not care where its spans came from.
+ * The trace list plus an inline waterfall.
  *
- * This is the component that makes the project's honesty rules enforceable
- * rather than aspirational. It takes a normalised `WaterfallSpan[]`, and three
- * adapters feed it:
+ * Three levels of detail, increasing in cost:
+ *   list       — scan, filter, pick a trace
+ *   waterfall  — see the shape of one trace inline, in place
+ *   drawer     — inspect a single span, over the top, without losing context
  *
- *   - `fromSpanRecord`   — REAL spans, teed out of the OTel SDK by `spanStore`
- *   - `fromSimulatedSpan` — FABRICATED spans from `/api/traces`
- *
- * Because both arrive in the same shape, the *rendering* is shared and only the
- * data source differs. The caller labels which is which; the UI never has to
- * pretend one is the other.
+ * Selection is deliberately not synced to the URL here; the drawer is a
+ * transient inspection surface, and making every span click a navigation would
+ * make the back button unusable.
  */
 
-export interface WaterfallSpan {
-  spanId: string
-  parentSpanId: string | null
-  name: string
-  serviceName: string
-  scopeName?: string
-  /** Milliseconds from the start of the trace. */
-  offsetMs: number
-  durationMs: number
-  status: 'ok' | 'error' | 'unset'
-  kind: string
-  attributes: Record<string, string | number | boolean>
-  events: Array<{
-    name: string
-    offsetMs: number
-    attributes: Record<string, string | number | boolean>
-  }>
-}
-
-export interface TraceViewerTrace {
-  id: string
-  title: string
-  subtitle: string
-  startTimeMs: number
-  durationMs: number
-  status: 'ok' | 'error'
-  spans: WaterfallSpan[]
-}
-
-/* ── Adapters ────────────────────────────────────────────────────────────── */
-
-/** REAL: an OTel `ReadableSpan` captured by the in-browser span store. */
-export function fromSpanRecord(span: SpanRecord, traceStartMs: number): WaterfallSpan {
-  return {
-    spanId: span.spanId,
-    parentSpanId: span.parentSpanId,
-    name: span.name,
-    serviceName:
-      typeof span.resource['service.name'] === 'string'
-        ? span.resource['service.name']
-        : 'unknown',
-    scopeName: span.scopeName,
-    offsetMs: Math.max(0, span.startTimeMs - traceStartMs),
-    durationMs: Math.max(span.durationMs, 0.05),
-    status:
-      span.statusCode === 'ERROR' ? 'error' : span.statusCode === 'OK' ? 'ok' : 'unset',
-    kind: span.kind,
-    attributes: span.attributes,
-    events: span.events.map((event) => ({
-      name: event.name,
-      offsetMs: event.offsetMs,
-      attributes: event.attributes,
-    })),
-  }
-}
-
-/** FABRICATED: a span produced by `simulator/engine.ts`. */
-export function fromSimulatedSpan(span: TraceSpan): WaterfallSpan {
-  return {
-    spanId: span.spanId,
-    parentSpanId: span.parentSpanId,
-    name: span.name,
-    serviceName: span.serviceName,
-    offsetMs: span.offsetMs,
-    durationMs: span.durationMs,
-    status: span.status === 'error' ? 'error' : 'ok',
-    kind: span.kind,
-    attributes: span.attributes,
-    events: [],
-  }
-}
-
-/** REAL: group a set of span-store spans into a viewer trace. */
-export function fromSpanTree(tree: SpanTree): TraceViewerTrace {
-  return {
-    id: tree.traceId,
-    title: tree.rootSpan.name,
-    subtitle: `${tree.spans.length} spans · ${tree.services.length} service${tree.services.length === 1 ? '' : 's'}`,
-    startTimeMs: tree.startTimeMs,
-    durationMs: tree.durationMs,
-    status: tree.hasError ? 'error' : 'ok',
-    spans: tree.spans.map((span) => fromSpanRecord(span, tree.startTimeMs)),
-  }
-}
-
-/** FABRICATED: shape a simulator trace for the same viewer. */
-export function fromSimulatedTrace(trace: SimulatedTrace): TraceViewerTrace {
-  const startTimeMs = new Date(trace.startedAt).getTime()
-  return {
-    id: trace.traceId,
-    title: trace.rootName,
-    subtitle: `${trace.spans.length} spans · via ${trace.serviceName}`,
-    startTimeMs,
-    durationMs: trace.durationMs,
-    status: trace.status,
-    spans: trace.spans.map(fromSimulatedSpan),
-  }
-}
-
-/* ── Layout helpers ──────────────────────────────────────────────────────── */
-
-interface PositionedSpan extends WaterfallSpan {
-  depth: number
-}
-
-/**
- * Flatten the span tree depth-first so parents always precede their children.
- * Orphans — a span whose parent was evicted from the ring buffer — are treated
- * as roots rather than dropped.
- */
-function position(spans: readonly WaterfallSpan[]): PositionedSpan[] {
-  const byParent = new Map<string | null, WaterfallSpan[]>()
-  const ids = new Set(spans.map((span) => span.spanId))
-
-  for (const span of spans) {
-    const parent = span.parentSpanId && ids.has(span.parentSpanId) ? span.parentSpanId : null
-    const bucket = byParent.get(parent)
-    if (bucket) bucket.push(span)
-    else byParent.set(parent, [span])
-  }
-
-  const ordered: PositionedSpan[] = []
-
-  const walk = (parentId: string | null, depth: number): void => {
-    const children = (byParent.get(parentId) ?? []).sort((a, b) => a.offsetMs - b.offsetMs)
-    for (const child of children) {
-      ordered.push({ ...child, depth })
-      walk(child.spanId, depth + 1)
-    }
-  }
-
-  walk(null, 0)
-  return ordered
-}
-
-/** Stable per-service colour, so the same service is the same colour every time. */
-const SERVICE_COLOURS = [
-  'var(--color-accent)',
-  'var(--color-ok)',
-  'var(--color-info)',
-  'var(--color-warn)',
-  '#f472b6',
-  '#22d3ee',
-  '#a3e635',
-  '#fb923c',
-]
-
-function serviceColour(serviceName: string): string {
-  let hash = 0
-  for (let i = 0; i < serviceName.length; i += 1) {
-    hash = (hash * 31 + serviceName.charCodeAt(i)) >>> 0
-  }
-  return SERVICE_COLOURS[hash % SERVICE_COLOURS.length] ?? 'var(--color-accent)'
-}
-
-/* ── Component ───────────────────────────────────────────────────────────── */
+export { fromSpanTree, fromSimulatedTrace, fromSpanRecord, fromSimulatedSpan } from './trace/model'
+export type { TraceViewerTrace, WaterfallSpan } from './trace/model'
 
 export function TraceViewer({
   traces,
@@ -197,32 +31,54 @@ export function TraceViewer({
 }: {
   traces: TraceViewerTrace[]
   emptyTitle?: string
-  emptyDescription?: ReactNode
+  emptyDescription?: React.ReactNode
   onRefresh?: () => void
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [rawFilter, setRawFilter] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   const [hideNoise, setHideNoise] = useState(true)
+  const [paused, setPaused] = useState(false)
+  const [frozen, setFrozen] = useState(traces)
+
+  /*
+   * The drawer holds its own reference to the trace it opened, rather than an
+   * id looked up in the live list. Real spans stream in continuously and the
+   * ring buffer evicts old ones, so a trace opened a minute ago can fall out of
+   * the list entirely — and an id-based lookup would then silently resolve to
+   * whatever trace had taken its place.
+   */
+  const [drawer, setDrawer] = useState<{ trace: TraceViewerTrace; spanId: string | null } | null>(
+    null,
+  )
+
+  // Freeze the list while paused, and while a trace is open for inspection, so
+  // rows do not move out from under the cursor.
+  const frozenNow = paused || drawer !== null
+  useEffect(() => {
+    if (!frozenNow) setFrozen(traces)
+  }, [traces, frozenNow])
+  const source = frozenNow ? frozen : traces
+
   const filter = useDebounce(rawFilter, 200)
 
   /**
    * Standalone `longtask` spans are legitimate telemetry but terrible company:
-   * the browser emits one every time the main thread blocks, so a handful of
-   * them drown out the traces you actually navigated to. They are filtered by
-   * default and one click brings them back.
+   * the browser emits one every time the main thread blocks, so a handful drown
+   * out the traces you actually navigated to. Filtered by default; one click
+   * brings them back.
    */
   const noiseCount = useMemo(
-    () => traces.filter((trace) => trace.spans.every((span) => span.name === 'longtask')).length,
-    [traces],
+    () => source.filter((trace) => trace.spans.every((span) => span.name === 'longtask')).length,
+    [source],
   )
 
   const base = useMemo(
     () =>
       hideNoise
-        ? traces.filter((trace) => !trace.spans.every((span) => span.name === 'longtask'))
-        : traces,
-    [traces, hideNoise],
+        ? source.filter((trace) => !trace.spans.every((span) => span.name === 'longtask'))
+        : source,
+    [source, hideNoise],
   )
 
   const selected = useMemo(
@@ -251,282 +107,170 @@ export function TraceViewer({
     }
   }
 
+  function openSpan(trace: TraceViewerTrace, span: WaterfallSpan) {
+    setDrawer({ trace, spanId: span.spanId })
+  }
+
   return (
-    <Panel className="flex min-h-0 flex-col overflow-hidden">
-      <PanelHeader
-        icon={ListTree}
-        title="Traces"
-        subtitle={
-          selected
-            ? `${traces.length} traces · showing ${formatNumber(selected.spans.length)} spans`
-            : undefined
-        }
-        actions={
-          <>
-            {noiseCount > 0 ? (
+    <>
+      <Panel className="flex min-h-0 flex-col overflow-hidden">
+        <PanelHeader
+          icon={ListTree}
+          title="Traces"
+          subtitle={
+            selected
+              ? `${source.length} traces · showing ${formatNumber(selected.spans.length)} spans`
+              : undefined
+          }
+          actions={
+            <>
               <Button
                 size="sm"
-                variant={hideNoise ? 'solid' : 'outline'}
-                onClick={() => setHideNoise((current) => !current)}
-                title="Standalone long-task spans, emitted whenever the main thread blocks."
+                variant={paused ? 'solid' : 'outline'}
+                onClick={() => setPaused((current) => !current)}
+                title={
+                  paused
+                    ? 'Resume: new spans are being buffered but the list is frozen.'
+                    : 'Freeze the list so rows stop moving while you read them.'
+                }
               >
-                {hideNoise ? `+${noiseCount} long tasks` : `hide ${noiseCount} long tasks`}
+                {paused ? <Play className="size-3" aria-hidden /> : <Pause className="size-3" aria-hidden />}
+                {paused ? 'Paused' : 'Live'}
               </Button>
-            ) : null}
-            {onRefresh ? (
-              <Button size="sm" variant="outline" onClick={onRefresh}>
-                Refresh
-              </Button>
-            ) : null}
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-subtle"
-                aria-hidden
-              />
-              <input
-                value={rawFilter}
-                onChange={(event) => setRawFilter(event.target.value)}
-                placeholder="Filter…"
-                aria-label="Filter traces"
-                className="w-32 rounded border border-edge bg-canvas/60 py-1 pl-7 pr-2 text-xs text-ink placeholder:text-subtle focus:border-accent/50 focus:outline-none"
-              />
-            </div>
-          </>
-        }
-      />
-
-      {traces.length === 0 ? (
-        <EmptyState icon={ListTree} title={emptyTitle} description={emptyDescription} />
-      ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
-          {/* Trace list */}
-          <ul className="scroll-thin max-h-72 overflow-auto border-b border-edge lg:max-h-none lg:border-b-0 lg:border-r">
-            {filtered.map((trace) => {
-              const isSelected = selected?.id === trace.id
-              return (
-                <li key={trace.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(trace.id)}
-                    className={cn(
-                      'w-full border-b border-edge/50 px-3 py-2.5 text-left transition-colors',
-                      isSelected ? 'bg-raised' : 'hover:bg-raised/50',
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <StatusDot tone={trace.status === 'error' ? 'crit' : 'ok'} />
-                      {/* Colour alone would hide the status from assistive tech. */}
-                      <span className="sr-only">
-                        {trace.status === 'error' ? 'error' : 'ok'}
-                      </span>
-                      <span className="truncate text-xs font-medium text-ink">{trace.title}</span>
-                    </div>
-                    <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-subtle">
-                      <span className="truncate font-mono">{trace.subtitle}</span>
-                      <span className="tnum shrink-0">{formatDuration(trace.durationMs)}</span>
-                    </div>
-                    <div className="mt-0.5 flex items-center justify-between gap-2 font-mono text-[10px] text-subtle">
-                      <span>{formatClock(trace.startTimeMs)}</span>
-                      <span className="truncate">{shortId(trace.id, 12)}</span>
-                    </div>
-                  </button>
-                </li>
-              )
-            })}
-
-            {filtered.length === 0 ? (
-              <li className="px-3 py-6 text-center text-xs text-subtle">
-                No traces match “{filter}”.
-              </li>
-            ) : null}
-          </ul>
-
-          {/* Waterfall */}
-          {selected ? (
-            <div className="scroll-thin min-h-0 overflow-auto">
-              <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-edge bg-panel/95 px-4 py-2.5 backdrop-blur">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="text-xs font-medium text-ink">{selected.title}</span>
-                  <Badge tone={selected.status === 'error' ? 'crit' : 'ok'}>
-                    {formatDuration(selected.durationMs)}
-                  </Badge>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void copy(selected.id)}
-                  title="Copy trace id"
-                  className="inline-flex items-center gap-1.5 rounded px-1.5 py-1 font-mono text-[10px] text-subtle transition-colors hover:bg-raised hover:text-muted"
+              {noiseCount > 0 ? (
+                <Button
+                  size="sm"
+                  variant={hideNoise ? 'solid' : 'outline'}
+                  onClick={() => setHideNoise((current) => !current)}
+                  title="Standalone long-task spans, emitted whenever the main thread blocks."
                 >
-                  {copied === selected.id ? (
-                    <Check className="size-3 text-ok" aria-hidden />
-                  ) : (
-                    <Copy className="size-3" aria-hidden />
-                  )}
-                  {selected.id}
-                </button>
+                  {hideNoise ? `+${noiseCount} long tasks` : `hide ${noiseCount} long tasks`}
+                </Button>
+              ) : null}
+              {onRefresh ? (
+                <Button size="sm" variant="outline" onClick={onRefresh}>
+                  Refresh
+                </Button>
+              ) : null}
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-subtle"
+                  aria-hidden
+                />
+                <input
+                  value={rawFilter}
+                  onChange={(event) => setRawFilter(event.target.value)}
+                  placeholder="Filter…"
+                  aria-label="Filter traces"
+                  className="w-32 rounded border border-edge bg-canvas/60 py-1 pl-7 pr-2 text-xs text-ink placeholder:text-subtle focus:border-accent/50 focus:outline-none"
+                />
               </div>
+            </>
+          }
+        />
 
-              <TimelineRuler durationMs={selected.durationMs} />
-              <SpanRows trace={selected} />
-            </div>
-          ) : null}
-        </div>
-      )}
-    </Panel>
-  )
-}
+        {source.length === 0 ? (
+          <EmptyState icon={ListTree} title={emptyTitle} description={emptyDescription} />
+        ) : (
+          <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+            {/* Trace list */}
+            <ul className="scroll-thin max-h-72 overflow-auto border-b border-edge lg:max-h-none lg:border-b-0 lg:border-r">
+              {filtered.map((trace) => {
+                const isSelected = selected?.id === trace.id
+                return (
+                  <li key={trace.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(trace.id)}
+                      className={cn(
+                        'w-full border-b border-edge/50 px-3 py-2 text-left transition-colors',
+                        isSelected ? 'bg-raised' : 'hover:bg-raised/50',
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <StatusDot tone={trace.status === 'error' ? 'crit' : 'ok'} />
+                        <span className="sr-only">{trace.status === 'error' ? 'error' : 'ok'}</span>
+                        <span className="truncate text-xs font-medium text-ink">{trace.title}</span>
+                      </div>
+                      <div className="mt-0.5 flex items-center justify-between gap-2 text-2xs text-subtle">
+                        <span className="truncate font-mono">{trace.subtitle}</span>
+                        <span className="tnum shrink-0">{formatDuration(trace.durationMs)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 font-mono text-2xs text-subtle">
+                        <span>{formatClock(trace.startTimeMs)}</span>
+                        <span className="truncate">{shortId(trace.id, 12)}</span>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
 
-function TimelineRuler({ durationMs }: { durationMs: number }) {
-  const ticks = [0, 0.25, 0.5, 0.75, 1]
-  return (
-    <div className="flex items-center gap-2 border-b border-edge px-4 py-1">
-      <div className="w-[min(38%,14rem)] shrink-0" />
-      <div className="relative h-4 flex-1">
-        {ticks.map((tick) => (
-          <span
-            key={tick}
-            className="tnum absolute top-0 -translate-x-1/2 font-mono text-[9px] text-subtle"
-            style={{ left: `${tick * 100}%` }}
-          >
-            {formatDuration(durationMs * tick)}
-          </span>
-        ))}
-      </div>
-      <div className="w-16 shrink-0" />
-    </div>
-  )
-}
+              {filtered.length === 0 ? (
+                <li className="px-3 py-6 text-center text-xs text-subtle">
+                  No traces match “{filter}”.
+                </li>
+              ) : null}
+            </ul>
 
-function SpanRows({ trace }: { trace: TraceViewerTrace }) {
-  const [openSpanId, setOpenSpanId] = useState<string | null>(null)
-  const rows = useMemo(() => position(trace.spans), [trace.spans])
-  const total = Math.max(trace.durationMs, 0.1)
+            {/* Inline waterfall */}
+            {selected ? (
+              <div className="scroll-thin min-h-0 overflow-auto">
+                <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-edge bg-panel/95 px-4 py-2 backdrop-blur">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-xs font-medium text-ink">{selected.title}</span>
+                    <Badge tone={selected.status === 'error' ? 'crit' : 'ok'}>
+                      {formatDuration(selected.durationMs)}
+                    </Badge>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void copy(selected.id)}
+                      title="Copy trace id"
+                      className="inline-flex items-center gap-1.5 rounded px-1.5 py-1 font-mono text-2xs text-subtle transition-colors hover:bg-raised hover:text-muted"
+                    >
+                      {copied === selected.id ? (
+                        <Check className="size-3 text-ok" aria-hidden />
+                      ) : (
+                        <Copy className="size-3" aria-hidden />
+                      )}
+                      {selected.id}
+                    </button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDrawer({ trace: selected, spanId: null })}
+                      title="Open this trace in the detail drawer"
+                    >
+                      <Maximize2 className="size-3" aria-hidden />
+                      Inspect
+                    </Button>
+                  </div>
+                </div>
 
-  return (
-    <ul>
-      {rows.map((span) => {
-        const left = Math.min(100, (span.offsetMs / total) * 100)
-        // Bars narrower than half a percent vanish on a 60-span trace.
-        const width = Math.max(0.4, Math.min(100 - left, (span.durationMs / total) * 100))
-        const isOpen = openSpanId === span.spanId
-        const tone: Tone = spanStatusTone(span.status)
-
-        return (
-          <li key={span.spanId} className="border-b border-edge/40">
-            <Collapsible.Root
-              open={isOpen}
-              onOpenChange={(next) => setOpenSpanId(next ? span.spanId : null)}
-            >
-              <Collapsible.Trigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    'flex w-full items-center gap-2 px-4 py-1.5 text-left transition-colors',
-                    isOpen ? 'bg-raised/60' : 'hover:bg-raised/40',
-                  )}
-                >
-                  <span className="flex w-[min(38%,14rem)] shrink-0 items-center gap-1.5">
-                    <span style={{ width: `${span.depth * 10}px` }} className="shrink-0" aria-hidden />
-                    {isOpen ? (
-                      <ChevronDown className="size-3 shrink-0 text-subtle" aria-hidden />
-                    ) : (
-                      <ChevronRight className="size-3 shrink-0 text-subtle" aria-hidden />
-                    )}
-                    <StatusDot tone={tone} />
-                    <span className="truncate text-[11px] text-ink" title={span.name}>
-                      {span.name}
-                    </span>
-                  </span>
-
-                  <span className="relative h-4 flex-1">
-                    <span
-                      className="absolute top-1/2 h-2 -translate-y-1/2 rounded-sm opacity-90"
-                      style={{
-                        left: `${left}%`,
-                        width: `${width}%`,
-                        backgroundColor:
-                          span.status === 'error' ? 'var(--color-crit)' : serviceColour(span.serviceName),
-                      }}
-                      title={`${span.serviceName} · ${formatDuration(span.durationMs)}`}
-                    />
-                  </span>
-
-                  <span className="tnum w-16 shrink-0 text-right font-mono text-[10px] text-muted">
-                    {formatDuration(span.durationMs)}
-                  </span>
-                </button>
-              </Collapsible.Trigger>
-
-              <Collapsible.Content>
-                <SpanDetail span={span} />
-              </Collapsible.Content>
-            </Collapsible.Root>
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-
-function SpanDetail({ span }: { span: PositionedSpan }) {
-  const entries = Object.entries(span.attributes)
-
-  return (
-    <div className="border-t border-edge/50 bg-canvas/50 px-4 py-3">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Badge tone="neutral" mono>
-          {span.kind}
-        </Badge>
-        <Badge tone="accent" mono>
-          {span.serviceName}
-        </Badge>
-        {span.scopeName ? (
-          <Badge tone="neutral" mono>
-            {span.scopeName}
-          </Badge>
-        ) : null}
-        <span className="font-mono text-[10px] text-subtle">span {span.spanId}</span>
-      </div>
-
-      {entries.length > 0 ? (
-        <dl className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
-          {entries.map(([key, value]) => (
-            <div key={key} className="flex items-baseline justify-between gap-3 border-b border-edge/30 py-0.5">
-              <dt className="truncate font-mono text-[10px] text-subtle" title={key}>
-                {key}
-              </dt>
-              <dd className="tnum truncate font-mono text-[10px] text-muted" title={String(value)}>
-                {String(value)}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <p className="mt-2 text-[11px] text-subtle">No attributes on this span.</p>
-      )}
-
-      {span.events.length > 0 ? (
-        <div className="mt-3">
-          <div className="text-[10px] font-medium uppercase tracking-wider text-subtle">
-            Events
+                <TimelineRuler durationMs={selected.durationMs} />
+                <SpanWaterfall
+                  trace={selected}
+                  selectedSpanId={drawer?.trace.id === selected.id ? drawer.spanId : null}
+                  onSelectSpan={(span) => openSpan(selected, span)}
+                />
+                <p className="px-4 py-2 text-2xs text-subtle">
+                  Select a span to inspect its attributes, timing and parent.
+                </p>
+              </div>
+            ) : null}
           </div>
-          <ul className="mt-1 space-y-0.5">
-            {span.events.map((event, index) => (
-              <li key={`${event.name}-${index}`} className="flex items-center gap-2 text-[11px]">
-                <span className="tnum font-mono text-[10px] text-subtle">
-                  +{formatDuration(event.offsetMs)}
-                </span>
-                <span className="text-muted">{event.name}</span>
-                {Object.entries(event.attributes).map(([key, value]) => (
-                  <span key={key} className="font-mono text-[10px] text-subtle">
-                    {key}={String(value)}
-                  </span>
-                ))}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </div>
+        )}
+      </Panel>
+
+      <TraceDrawer
+        trace={drawer?.trace ?? null}
+        initialSpanId={drawer?.spanId ?? null}
+        open={drawer !== null}
+        onOpenChange={(next) => {
+          if (!next) setDrawer(null)
+        }}
+      />
+    </>
   )
 }

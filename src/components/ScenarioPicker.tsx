@@ -36,7 +36,7 @@ export function ScenarioPicker() {
           aria-label="Active scenario"
           className={cn(
             'inline-flex min-w-[13rem] items-center justify-between gap-2 rounded border border-edge-strong bg-raised px-2.5 py-1.5',
-            'text-xs text-ink transition-colors hover:border-accent/50 focus:outline-none',
+            'text-sm text-ink transition-colors hover:border-accent/50 focus:outline-none',
             'data-[placeholder]:text-subtle',
           )}
         >
@@ -73,7 +73,7 @@ export function ScenarioPicker() {
                 >
                   <div className="flex items-center gap-2">
                     <Select.ItemText>
-                      <span className="text-xs font-medium text-ink">{scenario.name}</span>
+                      <span className="text-sm font-medium text-ink">{scenario.name}</span>
                     </Select.ItemText>
                     {scenario.expectedSeverity ? (
                       <Badge tone={severityTone(scenario.expectedSeverity)} mono>
@@ -83,7 +83,7 @@ export function ScenarioPicker() {
                       <Badge tone="ok">nominal</Badge>
                     )}
                   </div>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-subtle">
+                  <p className="mt-0.5 text-xs leading-relaxed text-subtle">
                     {scenario.description}
                   </p>
                   <Select.ItemIndicator className="absolute right-2 top-2.5">
@@ -107,7 +107,7 @@ export function ScenarioNarrative() {
   if (!scenario) return null
 
   return (
-    <p className="max-w-3xl text-xs leading-relaxed text-subtle">
+    <p className="max-w-3xl text-sm leading-relaxed text-subtle">
       <span className="font-medium text-muted">{scenario.name}.</span> {scenario.narrative}
     </p>
   )
