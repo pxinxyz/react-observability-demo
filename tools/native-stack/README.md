@@ -20,6 +20,11 @@ cd tools\native-stack
 .\run.ps1 -Stop    # stop
 ```
 
+Run these in an interactive PowerShell. `run.ps1` leaves five background processes holding their
+console handles, so piping its output into another program will wait for an EOF that never arrives —
+the script has finished, but the pipe stays open. Use `-Root <path>` to point at an install somewhere
+other than `<repo>\.lgtm-native`.
+
 Then, from the repository root:
 
 ```powershell

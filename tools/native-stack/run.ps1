@@ -27,17 +27,30 @@ $log   = Join-Path $Root 'logs'
 $data  = Join-Path $Root 'data'
 $groot = Join-Path $Root 'grafana'
 
+$names = @('otelcol', 'tempo', 'loki', 'prometheus', 'grafana')
+
+# Stopping comes first, and must not depend on anything being installed.
+# Otherwise deleting the binaries would leave you unable to stop a running
+# stack — the one moment you most want to.
+if ($Stop) {
+  foreach ($n in $names) {
+    Get-Process -Name $n -ErrorAction SilentlyContinue | ForEach-Object {
+      Write-Host "stopping $n (pid $($_.Id))"
+      Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+    }
+  }
+  Write-Host 'stopped.'
+  return
+}
+
 if (-not (Test-Path (Join-Path $bin 'otelcol.exe'))) {
-  throw "no binaries in $bin — run .\fetch.ps1 first"
+  throw "no binaries in $bin — run .\fetch.ps1 first (or pass -Root to point at an existing install)"
 }
 
 New-Item -ItemType Directory -Force -Path $log, $data, $cfg, (Join-Path $data 'grafana\plugins') | Out-Null
 
-$names = @('otelcol', 'tempo', 'loki', 'prometheus', 'grafana')
 foreach ($n in $names) { Get-Process -Name $n -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue }
 Start-Sleep -Milliseconds 800
-
-if ($Stop) { Write-Host 'stopped.'; return }
 
 # Resolve __ROOT__ into the runtime config copies.
 $rootForYaml = $Root.Replace('\', '/')
@@ -117,3 +130,8 @@ Probe 'Grafana'    'http://127.0.0.1:3000/api/health' 3000
 Write-Host ''
 Write-Host 'Grafana  http://localhost:3000   admin / admin'
 Write-Host 'Stop with .\run.ps1 -Stop; delete the whole thing with Remove-Item -Recurse -Force'
+
+# The background children keep the console handle open, so a caller that pipes
+# this script's output waits for EOF that never arrives. Exiting explicitly
+# makes the script return as soon as the stack is up.
+exit 0
