@@ -1,0 +1,20 @@
+# Files the Vercel CLI must never upload.
+#
+# `.env` is gitignored, so it never reaches GitHub — but `vercel deploy` uploads
+# the working directory independently of git and injects dotenv files as
+# build-time environment variables. That silently baked the local
+# `VITE_OTLP_ENDPOINT=http://localhost:4318` into the production bundle, so every
+# visitor's browser tried to export telemetry to their own machine and the UI
+# reported "awaiting export" instead of the honest "OTLP off".
+#
+# A deployment built from Git would not have hit this, because a fresh checkout
+# has no `.env`. Excluding it here makes the local path behave the same way.
+.env
+.env.*
+!.env.example
+
+# Not needed to build, and large.
+node_modules
+dist
+.vercel
+.git
