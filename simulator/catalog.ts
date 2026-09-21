@@ -1,4 +1,4 @@
-import type { ServiceDescriptor } from './types'
+import type { ServiceDescriptor } from './types.js'
 
 /**
  * The fabricated estate.

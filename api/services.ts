@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { buildServices, buildSummary, resolveScenario } from '../simulator'
-import type { ServicesResponse } from '../simulator'
-import { methodNotAllowed, queryParam, requestUrl, sendJson } from './_lib/http'
+import { buildServices, buildSummary, resolveScenario } from '../simulator/index.js'
+import type { ServicesResponse } from '../simulator/index.js'
+import { methodNotAllowed, queryParam, requestUrl, sendJson } from './_lib/http.js'
 
 /**
  * GET /api/services?scenario=<id>

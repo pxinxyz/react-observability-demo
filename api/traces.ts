@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { buildServices, buildTraces, resolveScenario } from '../simulator'
-import type { TracesResponse } from '../simulator'
-import { methodNotAllowed, numberParam, queryParam, requestUrl, sendJson } from './_lib/http'
+import { buildServices, buildTraces, resolveScenario } from '../simulator/index.js'
+import type { TracesResponse } from '../simulator/index.js'
+import { methodNotAllowed, numberParam, queryParam, requestUrl, sendJson } from './_lib/http.js'
 
 /**
  * GET /api/traces?scenario=<id>&limit=<n>

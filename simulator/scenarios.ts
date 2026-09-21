@@ -1,4 +1,4 @@
-import type { Scenario } from './types'
+import type { Scenario } from './types.js'
 
 /**
  * Scenario definitions.

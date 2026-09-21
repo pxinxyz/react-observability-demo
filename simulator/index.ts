@@ -14,10 +14,10 @@
  * It is deliberately not a service: no state, no clock of its own, no I/O.
  * Every function takes `now` and returns plain JSON-serialisable objects.
  */
-export type * from './types'
+export type * from './types.js'
 
-export { SERVICE_CATALOG, SERVICE_BY_ID, EDGE_SERVICE_ID } from './catalog'
-export { SCENARIOS, DEFAULT_SCENARIO_ID, resolveScenario, isScenarioId } from './scenarios'
+export { SERVICE_CATALOG, SERVICE_BY_ID, EDGE_SERVICE_ID } from './catalog.js'
+export { SCENARIOS, DEFAULT_SCENARIO_ID, resolveScenario, isScenarioId } from './scenarios.js'
 export {
   buildServices,
   buildSummary,
@@ -25,4 +25,4 @@ export {
   buildTraces,
   buildIncidents,
   buildEstate,
-} from './engine'
+} from './engine.js'

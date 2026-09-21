@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { buildMetrics, buildServices, resolveScenario } from '../simulator'
-import type { MetricsResponse } from '../simulator'
-import { methodNotAllowed, numberParam, queryParam, requestUrl, sendJson } from './_lib/http'
+import { buildMetrics, buildServices, resolveScenario } from '../simulator/index.js'
+import type { MetricsResponse } from '../simulator/index.js'
+import { methodNotAllowed, numberParam, queryParam, requestUrl, sendJson } from './_lib/http.js'
 
 /**
  * GET /api/metrics?scenario=<id>&window=<minutes>&step=<seconds>

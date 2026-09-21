@@ -1,6 +1,6 @@
-import { SERVICE_CATALOG } from './catalog'
-import { between, clamp, hashString, mulberry32, round, timeBucket } from './random'
-import { resolveScenario } from './scenarios'
+import { SERVICE_CATALOG } from './catalog.js'
+import { between, clamp, hashString, mulberry32, round, timeBucket } from './random.js'
+import { resolveScenario } from './scenarios.js'
 import type {
   Incident,
   IncidentEvent,
@@ -18,7 +18,7 @@ import type {
   TelemetrySummary,
   TraceSpan,
   TracesResponse,
-} from './types'
+} from './types.js'
 
 /** The simulated world only changes every 15 seconds. */
 const SERVICE_BUCKET_MS = 15_000

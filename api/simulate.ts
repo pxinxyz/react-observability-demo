@@ -5,8 +5,8 @@ import {
   buildEstate,
   isScenarioId,
   resolveScenario,
-} from '../simulator'
-import type { ScenariosResponse, SimulationResult } from '../simulator'
+} from '../simulator/index.js'
+import type { ScenariosResponse, SimulationResult } from '../simulator/index.js'
 import {
   methodNotAllowed,
   queryParam,
@@ -14,7 +14,7 @@ import {
   requestUrl,
   sendError,
   sendJson,
-} from './_lib/http'
+} from './_lib/http.js'
 
 /**
  * /api/simulate — the scenario control surface.
