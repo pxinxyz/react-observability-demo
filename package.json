@@ -2,7 +2,7 @@
   "name": "react-observability-demo",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "//type": "Deliberately NOT \"module\". Vercel compiles api/*.ts to api/*.js but does not bundle them, so the functions are resolved by Node at runtime. Under ESM that fails with ERR_UNSUPPORTED_DIR_IMPORT on `from '../simulator'`, because ESM has no directory-index resolution. As CommonJS the same import resolves simulator/index.js normally. Vite bundles the app itself and does not care.",
   "engines": {
     "node": ">=22.12.0"
   },
