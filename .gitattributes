@@ -1,0 +1,15 @@
+# Normalise line endings so a clone on Windows and a clone on Linux produce
+# byte-identical source files.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Keep lockfiles exactly as npm wrote them.
+package-lock.json -diff linguist-generated

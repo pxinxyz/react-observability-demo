@@ -1,0 +1,59 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# The OpenTelemetry backend this demo exports to.
+#
+# `grafana/otel-lgtm` bundles, in one container:
+#
+#   OpenTelemetry Collector  — receives OTLP on 4317 (gRPC) and 4318 (HTTP)
+#   Prometheus               — metrics      ← Prometheus, NOT Mimir
+#   Tempo                    — traces
+#   Loki                     — logs
+#   Pyroscope                — profiles
+#   Grafana                  — the UI, on 3000
+#
+# "LGTM" conventionally expands to Loki, Grafana, Tempo, Mimir. This image ships
+# Prometheus instead of Mimir, so this project says Prometheus everywhere. The
+# acronym is not a claim about which backend is running.
+#
+#   docker compose up -d      start it
+#   docker compose logs -f    watch the collector accept your spans
+#   docker compose down       stop it (add -v to discard the data)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    container_name: react-observability-demo-lgtm
+    restart: unless-stopped
+
+    ports:
+      - '3000:3000' # Grafana            http://localhost:3000  (admin / admin)
+      - '4317:4317' # OTLP/gRPC
+      - '4318:4318' # OTLP/HTTP          ← what VITE_OTLP_ENDPOINT points at
+      - '9090:9090' # Prometheus         ← metrics backend, not Mimir
+      - '3200:3200' # Tempo              ← traces backend
+      - '4040:4040' # Pyroscope
+
+    environment:
+      # Keep the bundled Grafana quiet unless you are debugging the stack itself.
+      ENABLE_LOGS_ALL: 'false'
+      # Uncomment to forward everything on to Grafana Cloud as well.
+      # OTEL_EXPORTER_OTLP_ENDPOINT: https://otlp-gateway-<zone>.grafana.net/otlp
+      # OTEL_EXPORTER_OTLP_HEADERS: Authorization=Basic <base64(instanceId:token)>
+
+    volumes:
+      # Persist the backends across `docker compose down`. Remove the volume to
+      # start from an empty Grafana, which is what you want when demoing.
+      - lgtm-data:/data
+
+    healthcheck:
+      # Grafana only starts serving once the collector and its datasources are up,
+      # so this is a reasonable proxy for "the whole stack is ready".
+      test: ['CMD-SHELL', 'wget -q --spider http://localhost:3000/api/health || exit 1']
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 20s
+
+volumes:
+  lgtm-data:
+    name: react-observability-demo-lgtm-data

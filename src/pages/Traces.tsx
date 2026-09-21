@@ -1,0 +1,184 @@
+import { useEffect, useMemo } from 'react'
+import * as Tabs from '@radix-ui/react-tabs'
+import { FlaskConical, RefreshCw, Telescope, Trash2 } from 'lucide-react'
+import { Badge, Button } from '@/components/ui/primitives'
+import { ProvenanceBanner } from '@/components/ProvenanceBanner'
+import { TraceViewer, fromSimulatedTrace, fromSpanTree } from '@/components/TraceViewer'
+import { ScenarioNarrative } from '@/components/ScenarioPicker'
+import { useSpanTrees, useTraces } from '@/hooks'
+import { clearTelemetryBuffers, recordInteraction } from '@/observability'
+import { cn, formatNumber } from '@/lib/utils'
+
+/**
+ * Traces.
+ *
+ * Two waterfalls, one component, and an explicit wall between them:
+ *
+ *   Tab 1 — spans this browser genuinely emitted, teed out of the OTel SDK.
+ *   Tab 2 — traces fabricated by the simulator, so there is something to compare
+ *           against without deploying eight real services.
+ *
+ * They look identical because they render through the same code path. That is
+ * the point: the honest difference is the data source, and only the data source.
+ */
+export function TracesPage() {
+  const trees = useSpanTrees()
+  const simulated = useTraces(14)
+
+  useEffect(() => {
+    recordInteraction('view-page', 'traces')
+  }, [])
+
+  const realTraces = useMemo(() => trees.map(fromSpanTree), [trees])
+  const simulatedTraces = useMemo(
+    () => (simulated.data?.traces ?? []).map(fromSimulatedTrace),
+    [simulated.data],
+  )
+
+  const errorCount = realTraces.filter((trace) => trace.status === 'error').length
+
+  return (
+    <>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <ScenarioNarrative />
+      </div>
+
+      <Tabs.Root defaultValue="real" className="flex min-h-0 flex-1 flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Tabs.List
+            aria-label="Trace source"
+            className="inline-flex items-center gap-1 rounded-lg border border-edge bg-panel/70 p-1"
+          >
+            <SourceTab value="real" icon={Telescope} label="This browser" count={realTraces.length} />
+            <SourceTab
+              value="simulated"
+              icon={FlaskConical}
+              label="Simulated estate"
+              count={simulatedTraces.length}
+            />
+          </Tabs.List>
+
+          <div className="flex items-center gap-2">
+            <Badge tone="neutral" mono>
+              {formatNumber(trees.reduce((sum, tree) => sum + tree.spans.length, 0))} real spans
+              buffered
+            </Badge>
+            {errorCount > 0 ? (
+              <Badge tone="crit" mono>
+                {errorCount} with errors
+              </Badge>
+            ) : null}
+          </div>
+        </div>
+
+        <Tabs.Content value="real" className="flex min-h-0 flex-1 flex-col gap-3 focus:outline-none">
+          <ProvenanceBanner
+            tone="real"
+            title="Genuine spans emitted by this tab"
+            body={
+              <>
+                These are the same <code className="font-mono">ReadableSpan</code> objects the
+                OpenTelemetry SDK handed to the OTLP exporter, teed into a bounded ring buffer by{' '}
+                <code className="font-mono">UiSpanProcessor</code> in{' '}
+                <code className="font-mono">src/observability/spanStore.ts</code>. Nothing is
+                fabricated and nothing is fetched from a server — close this tab and they are gone.
+                The buffer holds the most recent 400 spans.
+              </>
+            }
+            actions={
+              <>
+                <Button size="sm" variant="outline" onClick={clearTelemetryBuffers}>
+                  <Trash2 className="size-3" aria-hidden />
+                  Clear buffer
+                </Button>
+              </>
+            }
+          />
+
+          <TraceViewer
+            traces={realTraces}
+            emptyTitle="No spans in the buffer yet"
+            emptyDescription={
+              <>
+                Click around the app. The <code className="font-mono">document-load</code>,{' '}
+                <code className="font-mono">fetch</code>, <code className="font-mono">click</code>{' '}
+                and <code className="font-mono">longtask</code> instrumentations registered in{' '}
+                <code className="font-mono">src/observability/tracing.ts</code> emit spans
+                automatically, and every call through{' '}
+                <code className="font-mono">src/api/client.ts</code> adds a named one.
+              </>
+            }
+          />
+        </Tabs.Content>
+
+        <Tabs.Content
+          value="simulated"
+          className="flex min-h-0 flex-1 flex-col gap-3 focus:outline-none"
+        >
+          <ProvenanceBanner
+            tone="simulated"
+            title="Fabricated traces for a system that does not exist"
+            body={
+              <>
+                Generated by <code className="font-mono">simulator/engine.ts</code> and served by{' '}
+                <code className="font-mono">/api/traces</code>. The spans are shaped like real OTLP
+                traces so the same waterfall can render them, but no request was ever made and no
+                service was ever called. Switch the scenario above to change what the estate is
+                supposedly doing.
+              </>
+            }
+            actions={
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void simulated.refetch()}
+                disabled={simulated.isFetching}
+              >
+                <RefreshCw
+                  className={cn('size-3', simulated.isFetching && 'animate-spin')}
+                  aria-hidden
+                />
+                Refetch
+              </Button>
+            }
+          />
+
+          <TraceViewer
+            traces={simulatedTraces}
+            emptyTitle="No simulated traces"
+            emptyDescription="The traces endpoint returned nothing for this scenario."
+          />
+        </Tabs.Content>
+      </Tabs.Root>
+    </>
+  )
+}
+
+function SourceTab({
+  value,
+  icon: Icon,
+  label,
+  count,
+}: {
+  value: string
+  icon: typeof Telescope
+  label: string
+  count: number
+}) {
+  return (
+    <Tabs.Trigger
+      value={value}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors',
+        'text-subtle hover:text-muted',
+        'data-[state=active]:bg-raised data-[state=active]:text-ink',
+      )}
+    >
+      <Icon className="size-3.5" aria-hidden />
+      {label}
+      <span className="tnum rounded bg-canvas/70 px-1 font-mono text-[10px] text-subtle">
+        {count}
+      </span>
+    </Tabs.Trigger>
+  )
+}

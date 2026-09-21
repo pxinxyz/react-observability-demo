@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens.
+ *
+ * A deliberately dark, dense "control room" palette — closer to Grafana or a
+ * terminal than to a marketing page, because the thing being displayed is
+ * operational data and the numbers should carry the colour, not the chrome.
+ */
+@theme {
+  --color-canvas: #080b11;
+  --color-panel: #0e131c;
+  --color-raised: #141b26;
+  --color-edge: #1c2533;
+  --color-edge-strong: #2a3648;
+
+  --color-ink: #e8eef8;
+  --color-muted: #8a9ab3;
+  --color-subtle: #5a687f;
+
+  --color-accent: #38bdf8;
+  --color-accent-dim: #0b4a63;
+  --color-ok: #34d399;
+  --color-warn: #fbbf24;
+  --color-crit: #fb7185;
+  --color-info: #a78bfa;
+
+  --font-mono:
+    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-canvas text-ink;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'tnum';
+  }
+
+  /* Tabular numerals everywhere numbers are compared vertically. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+}
+
+@layer components {
+  /* A faint engineering grid, so large empty panels do not read as broken. */
+  .app-backdrop {
+    background-image:
+      radial-gradient(
+        ellipse 80% 60% at 50% -10%,
+        color-mix(in oklab, var(--color-accent) 9%, transparent),
+        transparent
+      ),
+      linear-gradient(to right, color-mix(in oklab, var(--color-edge) 55%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--color-edge) 55%, transparent) 1px, transparent 1px);
+    background-size:
+      100% 100%,
+      48px 48px,
+      48px 48px;
+  }
+}
+
+/* Thin scrollbars, so long span and incident lists do not get chunky rails. */
+@layer utilities {
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-edge-strong) transparent;
+  }
+
+  .scroll-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background-color: var(--color-edge-strong);
+    border-radius: 9999px;
+  }
+
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(0.82);
+    }
+  }
+
+  .animate-pulse-dot {
+    animation: pulse-dot 1.8s ease-in-out infinite;
+  }
+}
