@@ -250,6 +250,11 @@ This confirms: real OTLP/HTTP to the correct signal paths, correct parent/child 
 the instrumentation boundary, custom instruments recording and exporting, and logs carrying trace
 context.
 
+The deployed build was verified the same way, against production rather than localhost: all five
+`/api/*` functions return 200 with real payloads, every deep link serves the SPA, driving the
+scenario picker through the browser moves the estate (steady state 19/19 healthy → cache stampede
+15 healthy / 2 degraded / 2 critical, SLO meeting → breaching), and the console is clean.
+
 **Not verified by the author:** Grafana rendering the data, because the machine this was built on has
 virtualisation disabled in firmware and cannot start Docker at all (`WSL2 is unable to start since
 virtualisation is not enabled on this machine`). The collector-side path is the part that was
@@ -324,6 +329,10 @@ See `.env.example`.
 supplied at runtime, either by `docker-compose.yml` for local use or by a Grafana Cloud gateway URL
 for a hosted demo. There are no containers in the Vercel deployment.
 
+The live deployment is <https://react-observability-demo.vercel.app>. It runs with
+`VITE_OTLP_ENDPOINT` unset, so it exports nothing and says so in its header — see the security note
+above, and the note on the demo page itself.
+
 To point a deployment at Grafana Cloud:
 
 ```env
@@ -340,6 +349,36 @@ the one signature that works unchanged in both runtimes this project runs in: th
 runtime in production, and the Vite dev-server middleware in `vite.config.ts` during development.
 That is what makes a fresh clone work with `npm run dev` and no `vercel dev`, no account, and no
 network.
+
+### Two things that only fail on Vercel
+
+Both of these cost real debugging time, and neither reproduces locally. They are recorded here so
+they cost you none.
+
+**Vercel does not bundle serverless functions.** It transpiles each `api/*.ts` to `api/*.js`
+individually — stripping types but leaving the ESM syntax alone — and then Node resolves the module
+graph itself at runtime. Under ESM every relative specifier must name a real file *with its
+extension*, so `from '../simulator'` fails with `ERR_UNSUPPORTED_DIR_IMPORT` and `from './engine'`
+fails with `ERR_MODULE_NOT_FOUND`. All specifiers in `api/` and `simulator/` therefore carry
+explicit paths:
+
+```ts
+import { buildServices } from '../simulator/index.js'   // directory → its index
+import { sendJson } from './_lib/http.js'               // file → extension
+```
+
+`tools/esm-specifiers.mjs` is the codemod that applied this and will re-apply it if the rule is
+broken again. Removing `"type": "module"` to force CommonJS does *not* work — the emitted file still
+contains `import` statements, and Node then rejects it with "Cannot use import statement outside a
+module".
+
+**`vercel deploy` uploads `.env` regardless of `.gitignore`.** The CLI reads dotenv files from the
+working directory and injects them as build-time environment variables. Deploying from a machine
+that has a local `.env` pointing at `localhost:4318` bakes that into the production bundle, so every
+visitor's browser tries to export telemetry to its own machine — twelve `ERR_CONNECTION_REFUSED`
+per page load and a header reading "awaiting export" instead of "OTLP off". `.vercelignore` excludes
+dotenv files for exactly this reason. A build driven by the Git integration never sees it, because a
+fresh checkout has no `.env`.
 
 ---
 
