@@ -15,8 +15,12 @@
 # acronym is not a claim about which backend is running.
 #
 #   docker compose up -d      start it
-#   docker compose logs -f    watch the collector accept your spans
 #   docker compose down       stop it (add -v to discard the data)
+#
+# Note that per-component logging is off by default (ENABLE_LOGS_ALL below), so
+# `docker compose logs -f` shows the startup banner and nothing else. Set it to
+# 'true' when you want to watch the collector accept your spans — useful the
+# first time, when you are checking the wiring rather than reading Grafana.
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -45,14 +49,15 @@ services:
       # start from an empty Grafana, which is what you want when demoing.
       - lgtm-data:/data
 
-    healthcheck:
-      # Grafana only starts serving once the collector and its datasources are up,
-      # so this is a reasonable proxy for "the whole stack is ready".
-      test: ['CMD-SHELL', 'wget -q --spider http://localhost:3000/api/health || exit 1']
-      interval: 5s
-      timeout: 3s
-      retries: 24
-      start_period: 20s
+    # No healthcheck here on purpose.
+    #
+    # The image ships its own: `HEALTHCHECK CMD ["/otel-lgtm/docker/healthcheck.sh"]`,
+    # which knows the real readiness rules for all five backends. An earlier
+    # version of this file overrode it with `wget --spider`, which was wrong
+    # twice over: the final stage is `redhat/ubi9-micro` with only `curl-minimal`
+    # installed, so `wget` does not exist and the container would have sat at
+    # "unhealthy" forever while working perfectly. Inheriting is both simpler and
+    # more correct.
 
 volumes:
   lgtm-data:
