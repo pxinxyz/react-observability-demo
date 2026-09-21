@@ -168,6 +168,11 @@ see this working in the verification output below, where the instrumentation's `
 explicit `parent=` pointing at the app's own span. The cost is that context does not survive a stray
 `await` mid-span.
 
+One thing worth knowing if you go looking: `zone.js` *will* appear in `node_modules`. It is declared
+as an optional peer dependency of `@opentelemetry/instrumentation-user-interaction`, and npm
+installs peers automatically. Nothing imports it, and it is tree-shaken out of the build — every
+`zone.js` marker is absent from the shipped assets. Installed is not the same as used.
+
 **Scenario state lives in the browser.** An earlier design kept "the active scenario" in module scope
 on the server. That works on a warm serverless instance and silently resets on a cold one, which is
 the worst possible bug class for a demo. The client now owns the selection and passes `?scenario=` to
